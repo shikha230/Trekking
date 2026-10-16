@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Truck, Mail, Lock, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Truck, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Password visibility state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -84,13 +85,20 @@ const AdminLogin = () => {
                 <Lock size={18} />
               </span>
               <input 
-                type="password" 
+                type={showPassword ? "text" : "password"} 
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#050A19] border border-[#152B4D] rounded-xl px-4 py-3 pl-10 text-white text-sm focus:outline-none focus:border-[#00A8E8] transition-colors placeholder:text-slate-600"
+                className="w-full bg-[#050A19] border border-[#152B4D] rounded-xl px-4 py-3 pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#00A8E8] transition-colors placeholder:text-slate-600"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -104,10 +112,6 @@ const AdminLogin = () => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-[#152B4D] flex items-center justify-center gap-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold relative z-10">
-          <ShieldCheck size={14} className="text-emerald-500" />
-          <span>Secured Backend API Authentication</span>
-        </div>
 
       </div>
     </div>

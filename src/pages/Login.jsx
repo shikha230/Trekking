@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Password visibility state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -67,15 +68,22 @@ const Login = () => {
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Password</label>
             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:border-blue-600 transition-all">
-              <Lock className="text-slate-400 mr-3" size={20} />
+              <Lock className="text-slate-400 mr-3 shrink-0" size={20} />
               <input 
-                type="password" 
+                type={showPassword ? "text" : "password"} 
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-transparent outline-none text-sm text-slate-800 font-medium"
               />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-slate-400 hover:text-slate-600 ml-2 focus:outline-none"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
 
