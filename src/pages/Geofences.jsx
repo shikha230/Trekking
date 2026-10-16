@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
 const Geofences = () => {
   const [geofences, setGeofences] = useState([]);

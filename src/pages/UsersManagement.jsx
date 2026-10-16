@@ -26,7 +26,7 @@ const UsersManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/users/users?page=${page}&limit=${limit}&search=${search}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/users/users?page=${page}&limit=${limit}&search=${search}`);
       if (res.data.success) {
         setUsers(res.data.users);
         setTotalPages(res.data.totalPages);
@@ -60,7 +60,7 @@ const UsersManagement = () => {
         return;
       }
 
-      const res = await axios.post('http://localhost:5000/api/users/send-credentials', {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/users/send-credentials`, {
         email: user.email,
         name: user.name,
         password: password
@@ -83,7 +83,7 @@ const UsersManagement = () => {
       setActionLoading(`status-${user.id}`);
       const newStatus = !user.is_active;
 
-      const res = await axios.patch(`http://localhost:5000/api/users/users/${user.id}/status`, {
+      const res = await axios.patch(`${import.meta.env.VITE_API_URL}/api/users/users/${user.id}/status`, {
         is_active: newStatus
       });
 
@@ -105,7 +105,7 @@ const UsersManagement = () => {
 
     try {
       setActionLoading(`delete-${id}`);
-      const res = await axios.delete(`http://localhost:5000/api/users/users/${id}`);
+      const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/users/users/${id}`);
 
       if (res.data.success) {
         showNotification('success', 'User deleted successfully!');

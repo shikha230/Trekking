@@ -24,7 +24,7 @@ const HistoryPage = () => {
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/vehicles/all');
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/vehicles/all`);
         const data = Array.isArray(res.data) ? res.data : (res.data.vehicles || []);
         setVehicles(data);
         if (data.length > 0) setSelectedTruck(data[0]);
@@ -45,8 +45,8 @@ const HistoryPage = () => {
         setCurrentPage(1); 
         
         const [geoRes, histRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/geofences'),
-          axios.get(`http://localhost:5000/api/trips/history/${selectedTruck.traccar_id}`, {
+          axios.get(`${import.meta.env.VITE_API_URL}/api/geofences`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/trips/history/${selectedTruck.traccar_id}`, {
             params: {
               from: startDate,
               to: endDate

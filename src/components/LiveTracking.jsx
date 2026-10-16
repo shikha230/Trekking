@@ -9,7 +9,7 @@ const LiveTracking = () => {
   // Backend se live data fetch karna
   const fetchLiveStatus = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/vehicles/live');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/vehicles/live`);
       setVehicles(res.data);
     } catch (err) {
       console.error("Live fetch error", err);

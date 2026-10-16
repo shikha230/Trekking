@@ -12,7 +12,7 @@ const Reports = () => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      let url = 'http://localhost:5000/api/reports/shift?';
+      let url = `${import.meta.env.VITE_API_URL}/api/reports/shift?`;
       
       if (fromDateTime) url += `from=${encodeURIComponent(fromDateTime)}&`;
       if (toDateTime) url += `to=${encodeURIComponent(toDateTime)}&`;

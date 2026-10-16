@@ -40,7 +40,7 @@ const TripLogs = () => {
 
   const fetchVehicles = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/trips/vehicles-list');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/trips/vehicles-list`);
       setVehicles(res.data);
     } catch (err) {
       console.error("Vehicles fetch error", err);
@@ -50,7 +50,7 @@ const TripLogs = () => {
   const fetchTrips = async (pageNum = 1) => {
     try {
       setLoading(true);
-      let url = `http://localhost:5000/api/trips/trip?page=${pageNum}&limit=${limit}&`;
+      let url = `${import.meta.env.VITE_API_URL}/api/trips/trip?page=${pageNum}&limit=${limit}&`;
       if (selectedVehicle && selectedVehicle !== 'all') url += `vehicleId=${selectedVehicle}&`;
       
       if (fromDateTime) url += `from=${encodeURIComponent(fromDateTime)}&`;
@@ -88,7 +88,7 @@ const TripLogs = () => {
     }
     try {
       setGenerating(true);
-      await axios.get(`http://localhost:5000/api/trips/generate/${selectedVehicle}`);
+      await axios.get(`${import.meta.env.VITE_API_URL}/api/trips/generate/${selectedVehicle}`);
       setPage(1);
       await fetchTrips(1);
     } catch (err) {
@@ -101,7 +101,7 @@ const TripLogs = () => {
   // CSV Download Function
   const handleDownloadCSV = async () => {
     try {
-      let url = `http://localhost:5000/api/trips/trip?page=1&limit=1000&`; // Zyada data export ke liye limit badha di gayi hai
+      let url = `${import.meta.env.VITE_API_URL}/api/trips/trip?page=1&limit=1000&`; // Zyada data export ke liye limit badha di gayi hai
       if (selectedVehicle && selectedVehicle !== 'all') url += `vehicleId=${selectedVehicle}&`;
       if (fromDateTime) url += `from=${encodeURIComponent(fromDateTime)}&`;
       if (toDateTime) url += `to=${encodeURIComponent(toDateTime)}&`;

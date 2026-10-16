@@ -22,7 +22,7 @@ const VehicleList = () => {
   const fetchVehicles = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/vehicles/all');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/vehicles/all`);
       setVehicles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Vehicle fetch error", err);
@@ -40,7 +40,7 @@ const VehicleList = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/vehicles/add', formData);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/vehicles/add`, formData);
       setIsAddModalOpen(false);
       setFormData(initialForm);
       fetchVehicles();
@@ -66,7 +66,7 @@ const VehicleList = () => {
   const handleEdit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`http://localhost:5000/api/vehicles/${formData.id}`, formData);
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/vehicles/${formData.id}`, formData);
       setIsEditModalOpen(false);
       setFormData(initialForm);
       fetchVehicles();
@@ -80,7 +80,7 @@ const VehicleList = () => {
   const handleDelete = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete asset "${name}"?`)) {
       try {
-        await axios.delete(`http://localhost:5000/api/vehicles/${id}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/vehicles/${id}`);
         fetchVehicles();
         alert("Asset deleted successfully!");
       } catch (err) {

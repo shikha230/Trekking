@@ -6,7 +6,7 @@ import {
   MapPin, Navigation, Zap, Fuel, Timer, AlertTriangle, Cpu, Radio, ChevronRight, Eye
 } from 'lucide-react';
 
-const socket = io('http://localhost:5000');
+const socket = io(`${import.meta.env.VITE_API_URL}`);
 
 const Dashboard = () => {
   const [stats, setStats] = useState({ todayTrips: 0, activeOnTrip: 0, totalTrucks: 0, avgCycleTime: '0 min' });
@@ -16,8 +16,8 @@ const Dashboard = () => {
   const fetchData = useCallback(async () => {
     try {
       const [statsRes, liveRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/dashboard/stats'),
-        axios.get('http://localhost:5000/api/vehicles/live')
+        axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/stats`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/vehicles/live`)
       ]);
 
       setStats(statsRes.data || { todayTrips: 0, activeOnTrip: 0, totalTrucks: 0, avgCycleTime: '0 min' });

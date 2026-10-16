@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Radio, Activity, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 const socket = io(API_BASE_URL);
 
 const getTruckStatus = (truck) => {

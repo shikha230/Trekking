@@ -35,7 +35,7 @@ const ChangePassword = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/admin/change-password', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/change-password`, {
         email: formData.email,
         oldPassword: formData.oldPassword,
         newPassword: formData.newPassword

@@ -21,7 +21,7 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/admin/forgot-password', { email });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/forgot-password`, { email });
       if (res.data.success) {
         setMessage('OTP sent to your email successfully!');
         setStep(2); // Next step par move ho jao
@@ -41,7 +41,7 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/admin/reset-password-otp', {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/reset-password-otp`, {
         email,
         otp,
         newPassword
