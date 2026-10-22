@@ -147,7 +147,7 @@ const Dashboard = () => {
                   >
                     {vehicles.map(v => (
                       <option key={v.traccar_id} value={v.traccar_id}>
-                        {v.name} ({v.current_state || 'IDLE'})
+                        {v.name} {v.imei ? `[IMEI: ${v.imei}]` : ''} ({v.current_state || 'IDLE'})
                       </option>
                     ))}
                   </select>
@@ -195,13 +195,13 @@ const Dashboard = () => {
                 <AlertTriangle size={15} className="text-amber-500" /> Unit Diagnostics
               </h3>
               <span className="text-[10px] bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-lg font-mono font-bold border border-blue-200">
-                {activeTruck?.name || 'N/A'}
+                {activeTruck?.imei ? `IMEI: ${activeTruck.imei}` : (activeTruck?.name || 'N/A')}
               </span>
             </div>
 
             <div className="space-y-2.5">
               <LogItem time="NOW" text={`Current State: ${activeTruck?.current_state || 'IDLE'}`} status="info" />
-              <LogItem time="Odometer" text={`Travelled: ${Number(activeTruck?.odometer || 0).toFixed(1)} KM`} status="info" />
+              <LogItem time="IMEI" text={activeTruck?.imei || 'N/A'} status="success" />
               <LogItem time="GPS Lock" text="14 Satellites connected" status="success" />
               <LogItem time="Network" text="Latency < 45ms" status="success" />
             </div>
@@ -228,7 +228,7 @@ const Dashboard = () => {
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-slate-500 uppercase font-mono text-[10px] border-b border-slate-200 tracking-wider">
               <tr>
-                <th className="p-3">Vehicle Name</th>
+                <th className="p-3">Vehicle Name & IMEI</th>
                 <th className="p-3">Status / State</th>
                 <th className="p-3">Live Speed</th>
                 <th className="p-3">Odometer</th>
@@ -246,9 +246,12 @@ const Dashboard = () => {
                     key={v.traccar_id} 
                     className={`transition-colors hover:bg-blue-50/30 ${isSelected ? 'bg-blue-50/70 text-blue-900 font-semibold' : ''}`}
                   >
-                    <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
+                    <td className="p-3 flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-blue-600' : 'bg-slate-300'}`}></span>
-                      {v.name}
+                      <div>
+                        <div className="font-bold text-slate-900">{v.name}</div>
+                        <div className="text-[10px] font-mono text-blue-600">IMEI: {v.imei || 'N/A'}</div>
+                      </div>
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
