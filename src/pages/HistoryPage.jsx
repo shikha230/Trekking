@@ -63,11 +63,15 @@ const HistoryPage = () => {
       try {
         setLoading(true);
         setCurrentPage(1); 
-        
+
+        // 🟢 FIX: Send clean local datetime strings without UTC timezone shifting conversion
+        const fromParam = `${startDate} ${startTime}:00`;
+        const toParam = `${endDate} ${endTime}:59`;
+
         const histRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/trips/history/${selectedTruck.traccar_id}`, {
           params: {
-            from: startDate,
-            to: endDate,
+            from: fromParam,
+            to: toParam,
             fromTime: startTime,
             toTime: endTime
           }
@@ -137,6 +141,27 @@ const HistoryPage = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentHistory = filteredHistory.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+
+  // 🟢 Helper function to format Date & Time in 12-Hour AM/PM format
+  const formatAMPM = (dateString) => {
+    if (!dateString) return { time: 'N/A', date: 'N/A' };
+    const dateObj = new Date(dateString);
+    
+    const time = dateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    const date = dateObj.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    return { time, date };
+  };
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen font-sans text-gray-800">
@@ -274,25 +299,27 @@ const HistoryPage = () => {
                 <tr><td colSpan="5" className="p-20 text-center text-gray-400 font-bold animate-pulse">Loading timing logs...</td></tr>
               ) : currentHistory.length > 0 ? currentHistory.map((log, index) => {
                 const attrs = typeof log.attributes === 'string' ? JSON.parse(log.attributes) : (log.attributes || {});
+                
+                const formatted = formatAMPM(log.devicetime || log.serverTime);
 
                 return (
                   <tr key={index} className="hover:bg-blue-50/20 transition-colors">
                     <td className="p-6">
                       <p className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
                         <Clock size={14} className="text-blue-500" />
-                        {new Date(log.devicetime).toLocaleTimeString()}
+                        {formatted.time}
                       </p>
-                      <p className="text-[10px] font-bold text-gray-400">{new Date(log.devicetime).toLocaleDateString()}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-0.5">{formatted.date}</p>
                     </td>
                     <td className="p-6">
                       <p className="font-black text-gray-800 text-sm">{log.zoneName}</p>
                       <p className="text-[10px] font-mono text-gray-400">{Number(log.latitude).toFixed(4)}, {Number(log.longitude).toFixed(4)}</p>
                     </td>
                     <td className="p-6">
-                       <div className="text-sm font-black text-gray-700">{log.speedKMH} KM/H</div>
-                       <div className={`text-[9px] font-black uppercase ${attrs.ignition ? 'text-green-500' : 'text-gray-300'}`}>
-                         {attrs.ignition ? 'Engine ON' : 'Engine OFF'}
-                       </div>
+                        <div className="text-sm font-black text-gray-700">{log.speedKMH} KM/H</div>
+                        <div className={`text-[9px] font-black uppercase ${attrs.ignition ? 'text-green-500' : 'text-gray-300'}`}>
+                          {attrs.ignition ? 'Engine ON' : 'Engine OFF'}
+                        </div>
                     </td>
                     <td className="p-6">
                       <div className="text-sm font-bold text-gray-600">{((attrs.totalDistance || 0) / 1000).toFixed(1)} KM</div>
