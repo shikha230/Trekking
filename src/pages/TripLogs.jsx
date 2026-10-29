@@ -7,6 +7,8 @@ const TripLogs = () => {
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   
+  // Traccar jaisa Period filter state ('today', 'week', 'month', 'custom')
+  const [period, setPeriod] = useState('today');
   const [fromDateTime, setFromDateTime] = useState('');
   const [toDateTime, setToDateTime] = useState('');
   
@@ -16,11 +18,43 @@ const TripLogs = () => {
   const [generating, setGenerating] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // Helper to format dates for API in Indian Standard Time (IST) or ISO local format
+  const getISTISOString = (date) => {
+    const offsetMinutes = 330; // IST is UTC+5:30
+    const istDate = new Date(date.getTime() + (offsetMinutes * 60 * 1000));
+    return istDate.toISOString().slice(0, 16);
+  };
+
+  // Handle Period Presets (Traccar Style)
+  useEffect(() => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date(now);
+
+    if (period === 'today') {
+      start.setHours(0, 0, 0, 0);
+      setFromDateTime(getISTISOString(start));
+      setToDateTime(getISTISOString(end));
+    } else if (period === 'week') {
+      const day = now.getDay() || 7;
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - day + 1);
+      setFromDateTime(getISTISOString(start));
+      setToDateTime(getISTISOString(end));
+    } else if (period === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      setFromDateTime(getISTISOString(start));
+      setToDateTime(getISTISOString(end));
+    }
+    // Agar 'custom' hai toh user khud select karega, values overwrite nahi hongi
+  }, [period]);
+
   // 12-Hour AM/PM Format Helper
   const formatDateTime = (dateString) => {
     if (!dateString) return '---';
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -101,7 +135,7 @@ const TripLogs = () => {
   // CSV Download Function
   const handleDownloadCSV = async () => {
     try {
-      let url = `${import.meta.env.VITE_API_URL}/api/trips/trip?page=1&limit=1000&`; // Zyada data export ke liye limit badha di gayi hai
+      let url = `${import.meta.env.VITE_API_URL}/api/trips/trip?page=1&limit=1000&`;
       if (selectedVehicle && selectedVehicle !== 'all') url += `vehicleId=${selectedVehicle}&`;
       if (fromDateTime) url += `from=${encodeURIComponent(fromDateTime)}&`;
       if (toDateTime) url += `to=${encodeURIComponent(toDateTime)}&`;
@@ -114,21 +148,20 @@ const TripLogs = () => {
         return;
       }
 
-      // CSV Headers
-      let csvContent = "data:text/csv;charset=utf-8,Truck Name,Start Time,End Time,Duration,Status\n";
+      let csvContent = "data:text/csv;charset=utf-8,Truck Name,Start Time,Unloading Time,End Time,Duration,IO9,Status\n";
 
-      // Rows mapping
       allTrips.forEach(t => {
         const truckName = `"${t.vehicle_name || 'N/A'}"`;
         const startTime = `"${formatDateTime(t.start_time)}"`;
+        const unloadingTime = `"${formatDateTime(t.unloading_start_time)}"`;
         const endTime = `"${formatDateTime(t.end_time)}"`;
         const duration = `"${t.total_cycle_minutes ? formatDuration(t.total_cycle_minutes) : 'In Transit'}"`;
+        const endIo9 = `"${t.end_io9 ?? 'N/A'}"`;
         const status = `"${t.status || 'N/A'}"`;
 
-        csvContent += [truckName, startTime, endTime, duration, status].join(",") + "\n";
+        csvContent += [truckName, startTime, unloadingTime, endTime, duration, endIo9, status].join(",") + "\n";
       });
 
-      // Download trigger
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -154,11 +187,10 @@ const TripLogs = () => {
             </div> 
             Trip & Cycle Logs
           </h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">Automatically detected truck cycles from geofences</p>
+          <p className="text-xs text-slate-500 font-medium mt-1">Automatically detected truck cycles from geofences & sensor states</p>
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Download Button */}
           <button 
             onClick={handleDownloadCSV}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer justify-center flex-1 sm:flex-none"
@@ -178,12 +210,13 @@ const TripLogs = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
+      {/* Filters Section (Traccar Style Period + Vehicle + Custom Date) */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-center">
         <div className="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase">
           <Filter size={16} className="text-blue-600"/> Filters:
         </div>
         
+        {/* Vehicle Selector */}
         <select 
           value={selectedVehicle} 
           onChange={handleFilterChange(setSelectedVehicle)}
@@ -195,13 +228,27 @@ const TripLogs = () => {
           ))}
         </select>
 
+        {/* Traccar Style Period Selector */}
+        <select
+          value={period}
+          onChange={(e) => { setPeriod(e.target.value); setPage(1); }}
+          className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-600"
+        >
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Period</option>
+        </select>
+
+        {/* Custom From & To Inputs (Active only if period is 'custom') */}
         <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
           From: 
           <input 
             type="datetime-local" 
             value={fromDateTime} 
+            disabled={period !== 'custom'}
             onChange={handleFilterChange(setFromDateTime)}
-            className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-blue-600"
+            className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-blue-600 disabled:opacity-50"
           />
         </div>
 
@@ -210,19 +257,11 @@ const TripLogs = () => {
           <input 
             type="datetime-local" 
             value={toDateTime} 
+            disabled={period !== 'custom'}
             onChange={handleFilterChange(setToDateTime)}
-            className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-blue-600"
+            className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-blue-600 disabled:opacity-50"
           />
         </div>
-
-        {(fromDateTime || toDateTime || selectedVehicle !== 'all') && (
-          <button 
-            onClick={() => { setSelectedVehicle('all'); setFromDateTime(''); setToDateTime(''); setPage(1); }}
-            className="text-xs text-rose-600 font-bold hover:underline ml-auto cursor-pointer"
-          >
-            Clear Filters
-          </button>
-        )}
       </div>
 
       {/* Trips Table Container */}
@@ -235,19 +274,20 @@ const TripLogs = () => {
                 <th className="px-6 py-4">Start Time</th>
                 <th className="px-6 py-4">End Time</th>
                 <th className="px-6 py-4">Duration</th>
+                <th className="px-6 py-4">End IO9</th>
                 <th className="px-6 py-4">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-20 text-slate-400 font-bold">
+                  <td colSpan="6" className="text-center py-20 text-slate-400 font-bold">
                     Loading trips...
                   </td>
                 </tr>
               ) : trips.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-20 text-slate-400 font-bold">
+                  <td colSpan="6" className="text-center py-20 text-slate-400 font-bold">
                     No trips found for the selected time range.
                   </td>
                 </tr>
@@ -268,6 +308,9 @@ const TripLogs = () => {
                     </td>
                     <td className="px-6 py-4 font-black text-blue-600">
                       {t.total_cycle_minutes ? formatDuration(t.total_cycle_minutes) : 'In Transit'}
+                    </td>
+                    <td className="px-6 py-4 font-black text-emerald-600">
+                      {t.end_io9 !== null && t.end_io9 !== undefined ? t.end_io9 : '---'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${

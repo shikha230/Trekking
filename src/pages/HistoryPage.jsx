@@ -7,7 +7,6 @@ import {
 const HistoryPage = () => {
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
-  // Default values for reset
   const DEFAULT_START_DATE = '2026-09-21';
   const DEFAULT_START_TIME = '00:00';
   const DEFAULT_END_TIME = '23:59';
@@ -15,28 +14,26 @@ const HistoryPage = () => {
 
   // --- STATES ---
   const [vehicles, setVehicles] = useState([]); 
-  const [selectedTruck, setSelectedTruck] = useState(null); 
+  const [selectedTruckId, setSelectedTruckId] = useState('all'); // Default 'all'
   const [history, setHistory] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // 🗓️ Date, ⏰ Time & 🚦 Status Filter States
   const [startDate, setStartDate] = useState(DEFAULT_START_DATE); 
   const [endDate, setEndDate] = useState(getTodayString());
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
   const [statusFilter, setStatusFilter] = useState(DEFAULT_STATUS);
 
-  // 🔄 Reset Filters Handler
   const handleResetFilters = () => {
     setStartDate(DEFAULT_START_DATE);
     setEndDate(getTodayString());
     setStartTime(DEFAULT_START_TIME);
     setEndTime(DEFAULT_END_TIME);
     setStatusFilter(DEFAULT_STATUS);
-    if (vehicles.length > 0) setSelectedTruck(vehicles[0]);
+    setSelectedTruckId('all');
     setCurrentPage(1);
   };
 
@@ -47,7 +44,6 @@ const HistoryPage = () => {
         const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/vehicles/all`);
         const data = Array.isArray(res.data) ? res.data : (res.data.vehicles || []);
         setVehicles(data);
-        if (data.length > 0) setSelectedTruck(data[0]);
       } catch (err) {
         console.error("Error fetching vehicles", err);
       }
@@ -57,18 +53,15 @@ const HistoryPage = () => {
 
   // 2. Fetch History when Truck, Date, or Time changes
   useEffect(() => {
-    if (!selectedTruck?.traccar_id) return;
-
     const fetchHistoryData = async () => {
       try {
         setLoading(true);
         setCurrentPage(1); 
 
-        // 🟢 FIX: Send clean local datetime strings without UTC timezone shifting conversion
         const fromParam = `${startDate} ${startTime}:00`;
         const toParam = `${endDate} ${endTime}:59`;
 
-        const histRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/trips/history/${selectedTruck.traccar_id}`, {
+        const histRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/trips/history/${selectedTruckId}`, {
           params: {
             from: fromParam,
             to: toParam,
@@ -92,9 +85,8 @@ const HistoryPage = () => {
     };
 
     fetchHistoryData();
-  }, [selectedTruck, startDate, endDate, startTime, endTime]);
+  }, [selectedTruckId, startDate, endDate, startTime, endTime]);
 
-  // Distance Calculation helper
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
     const φ1 = (lat1 * Math.PI) / 180;
@@ -109,13 +101,12 @@ const HistoryPage = () => {
   const getZoneName = useCallback((lat, lng) => {
     if (!zones || zones.length === 0) return "On Road / In Transit";
     const foundZone = zones.find(z => {
-      const dist = calculateDistance(lat, lng, parseFloat(z.latitude), parseFloat(z.longitude));
+      const dist = calculateDistance(lat, lng, parseFloat(z.latitude || 0), parseFloat(z.longitude || 0));
       return dist <= (z.radius || 150);
     });
     return foundZone ? foundZone.name : "On Road / In Transit";
   }, [zones]);
 
-  // ⚡ Optimized Filtering & Pagination Logic
   const processedHistory = history.map((log) => {
     const speedKMH = log.speed_kmh !== undefined ? log.speed_kmh : Math.round((log.speed || 0) * 1.852);
     const zoneName = log.location || getZoneName(log.latitude, log.longitude);
@@ -142,19 +133,20 @@ const HistoryPage = () => {
   const currentHistory = filteredHistory.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
 
-  // 🟢 Helper function to format Date & Time in 12-Hour AM/PM format
   const formatAMPM = (dateString) => {
     if (!dateString) return { time: 'N/A', date: 'N/A' };
     const dateObj = new Date(dateString);
     
-    const time = dateObj.toLocaleTimeString('en-US', {
+    const time = dateObj.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
     });
 
-    const date = dateObj.toLocaleDateString('en-US', {
+    const date = dateObj.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -162,6 +154,11 @@ const HistoryPage = () => {
 
     return { time, date };
   };
+
+  // Get display name for active truck
+  const activeTruckName = selectedTruckId === 'all' 
+    ? 'All Trucks' 
+    : (vehicles.find(v => v.traccar_id?.toString() === selectedTruckId?.toString())?.name || selectedTruckId);
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen font-sans text-gray-800">
@@ -184,12 +181,10 @@ const HistoryPage = () => {
             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Asset:</span>
             <select 
               className="bg-gray-50 border-none rounded-xl px-3 py-2 font-bold text-xs text-gray-700 outline-none min-w-[130px] cursor-pointer"
-              onChange={(e) => {
-                const truck = vehicles.find(v => v.traccar_id?.toString() === e.target.value);
-                if (truck) setSelectedTruck(truck);
-              }}
-              value={selectedTruck?.traccar_id || ''}
+              onChange={(e) => setSelectedTruckId(e.target.value)}
+              value={selectedTruckId}
             >
+              <option value="all">All Trucks</option>
               {vehicles.map(v => (
                 <option key={v.id || v.traccar_id} value={v.traccar_id}>
                   {v.name}
@@ -250,7 +245,7 @@ const HistoryPage = () => {
             />
           </div>
 
-          {/* 🔄 RESET BUTTON */}
+          {/* RESET BUTTON */}
           <button
             onClick={handleResetFilters}
             title="Reset Filters"
@@ -264,22 +259,20 @@ const HistoryPage = () => {
       </div>
 
       {/* STATS CARDS */}
-      {selectedTruck && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Active Asset</p>
-            <p className="text-2xl font-black text-blue-600">{selectedTruck.name}</p>
-          </div>
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Filtered Logs Count</p>
-            <p className="text-2xl font-black text-gray-900">{filteredHistory.length}</p>
-          </div>
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status Filter Active</p>
-            <p className="text-xs font-bold text-gray-700 mt-1">{statusFilter.replace('_', ' ')}</p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Active Asset Filter</p>
+          <p className="text-2xl font-black text-blue-600">{activeTruckName}</p>
         </div>
-      )}
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Filtered Logs Count</p>
+          <p className="text-2xl font-black text-gray-900">{filteredHistory.length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status Filter Active</p>
+          <p className="text-xs font-bold text-gray-700 mt-1">{statusFilter.replace('_', ' ')}</p>
+        </div>
+      </div>
 
       {/* TABLE */}
       <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden mb-10">
@@ -287,6 +280,7 @@ const HistoryPage = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="text-[11px] font-black text-gray-400 uppercase tracking-[2px] border-b border-gray-50 bg-gray-50/30">
+                <th className="p-6">Truck Name</th>
                 <th className="p-6">Timestamp (Time)</th>
                 <th className="p-6">Zone / Location</th>
                 <th className="p-6">Speed & Engine</th>
@@ -296,14 +290,17 @@ const HistoryPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan="5" className="p-20 text-center text-gray-400 font-bold animate-pulse">Loading timing logs...</td></tr>
+                <tr><td colSpan="6" className="p-20 text-center text-gray-400 font-bold animate-pulse">Loading timing logs...</td></tr>
               ) : currentHistory.length > 0 ? currentHistory.map((log, index) => {
                 const attrs = typeof log.attributes === 'string' ? JSON.parse(log.attributes) : (log.attributes || {});
-                
-                const formatted = formatAMPM(log.devicetime || log.serverTime);
+                const formatted = formatAMPM(log.devicetime || log.servertime);
 
                 return (
                   <tr key={index} className="hover:bg-blue-50/20 transition-colors">
+                    <td className="p-6 font-black text-gray-900 text-sm flex items-center gap-2">
+                      <Truck size={14} className="text-blue-600" />
+                      {log.vehicle_name || log.deviceid || 'Truck'}
+                    </td>
                     <td className="p-6">
                       <p className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
                         <Clock size={14} className="text-blue-500" />
@@ -336,7 +333,7 @@ const HistoryPage = () => {
                   </tr>
                 );
               }) : (
-                <tr><td colSpan="5" className="p-20 text-center text-gray-400 font-bold">No movement records found for this filter.</td></tr>
+                <tr><td colSpan="6" className="p-20 text-center text-gray-400 font-bold">No movement records found for this filter.</td></tr>
               )}
             </tbody>
           </table>

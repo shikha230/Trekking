@@ -15,7 +15,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const TRACCAR_URL = 'https://traccar-uksd.srv1882256.hstgr.cloud';
+  const TRACCAR_URL = 'http://traccar-uksd.srv1882256.hstgr.cloud:8082';
 
   const handleLogin = async (e) => {
     e.preventDefault();

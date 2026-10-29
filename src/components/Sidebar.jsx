@@ -5,12 +5,14 @@ import { LayoutDashboard, Map as MapIcon, Truck, MapPin, ClipboardList, FileText
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
-// LocalStorage se user data read karein
   const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('adminUser') || '{}');
-  
-  // Smart Admin Check (Role match kare ya email admin ho)
   const userRole = (storedUser.role || '').toLowerCase();
-  const isAdmin = userRole === 'admin' || storedUser.email === 'admin@trucktrak.com' || (storedUser.email || '').includes('admin');
+  
+  // Check if admin is currently logged in based on localStorage tokens/roles
+  const isAdmin = userRole === 'admin' || 
+                  storedUser.email === 'admin@trucktrak.com' || 
+                  (storedUser.email || '').includes('admin') || 
+                  Boolean(localStorage.getItem('adminToken'));
 
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
@@ -33,11 +35,18 @@ const Sidebar = ({ isOpen, onClose }) => {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    navigate('/login');
+    // 🟢 Role ke hisaab se decide karein ki kahan redirect karna hai
+    if (isAdmin) {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminUser');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/admin-login'); // <-- Agar aapka admin login route '/admin-login' hai
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/login'); // <-- Normal user login route
+    }
   };
 
   return (

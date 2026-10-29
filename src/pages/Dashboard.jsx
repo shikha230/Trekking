@@ -183,8 +183,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-100 mt-4">
             <TelemetryWidget label="Live Speed" value={`${Number(activeTruck?.speed || 0).toFixed(1)} km/h`} icon={<Activity size={15} className="text-blue-600" />} />
             <TelemetryWidget label="Odometer" value={`${Number(activeTruck?.odometer || 0).toFixed(1)} km`} icon={<Clock size={15} className="text-indigo-600" />} />
-            <TelemetryWidget label="Battery / Fuel" value={activeTruck?.fuel ? `${activeTruck.fuel}%` : "87%"} icon={<Fuel size={15} className="text-emerald-600" />} />
-          </div>
+<TelemetryWidget label="Battery / Fuel" value={`${activeTruck?.batteryFuel ?? activeTruck?.fuel ?? 87}%`} icon={<Fuel size={15} className="text-emerald-600" />} />          </div>
         </div>
 
         {/* Real-Time Diagnostics Panel */}
