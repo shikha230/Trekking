@@ -6,7 +6,7 @@ import {
   MapPin, Navigation, Zap, Fuel, Timer, AlertTriangle, Cpu, Radio, ChevronRight, Eye
 } from 'lucide-react';
 
-const socket = io(`${import.meta.env.VITE_API_URL}`);
+const socket = io();
 
 const Dashboard = () => {
   const [stats, setStats] = useState({ todayTrips: 0, activeOnTrip: 0, totalTrucks: 0, avgCycleTime: '0 min' });
