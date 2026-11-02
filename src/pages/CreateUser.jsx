@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { UserPlus, Mail, Shield, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { UserPlus, Mail, Shield, User, CheckCircle, AlertCircle, Loader2, Key, Eye, EyeOff, Wand2Icon } from 'lucide-react';
 
 const CreateUser = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'user'
+    role: 'user',
+    password: ''
   });
   
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -20,9 +22,22 @@ const CreateUser = () => {
     });
   };
 
- const handleSubmit = async (e) => {
+  // 🔐 Auto Generate Strong Password Function
+  const generateStrongPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*!_";
+    let password = "";
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData({
+      ...formData,
+      password: password
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return; // Agar pehle se request chal rahi hai toh dubara mat bhejo
+    if (loading) return;
 
     setLoading(true);
     setSuccessMessage('');
@@ -32,7 +47,7 @@ const CreateUser = () => {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/users/create-user`, formData);
       if (res.data.success) {
         setSuccessMessage(`User created successfully! Credentials sent to ${formData.email}`);
-        setFormData({ name: '', email: '', role: 'user' });
+        setFormData({ name: '', email: '', role: 'user', password: '' });
       }
     } catch (err) {
       console.error("User creation error:", err);
@@ -41,6 +56,7 @@ const CreateUser = () => {
       setLoading(false);
     }
   };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 min-h-screen font-sans text-slate-900 flex justify-center items-center">
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 w-full max-w-lg p-8">
@@ -74,6 +90,8 @@ const CreateUser = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Full Name */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Full Name</label>
             <div className="relative">
@@ -92,6 +110,7 @@ const CreateUser = () => {
             </div>
           </div>
 
+          {/* Email Address */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Email Address</label>
             <div className="relative">
@@ -110,6 +129,42 @@ const CreateUser = () => {
             </div>
           </div>
 
+          {/* Password with Generate & Hide/Show Toggle */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-600">Password</label>
+              <button 
+                type="button" 
+                onClick={generateStrongPassword}
+                className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100"
+              >
+                <Wand2Icon size={12} /> Auto-Generate
+              </button>
+            </div>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Key size={16} />
+              </span>
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter or generate password"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-slate-700 outline-none focus:border-blue-600 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Role */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Role</label>
             <div className="relative">
@@ -128,6 +183,7 @@ const CreateUser = () => {
             </div>
           </div>
 
+          {/* Submit Button */}
           <button 
             type="submit"
             disabled={loading}
