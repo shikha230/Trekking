@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { UserPlus, Mail, Shield, User, CheckCircle, AlertCircle, Loader2, Key, Eye, EyeOff, Wand2Icon } from 'lucide-react';
+import { UserPlus, Mail, Shield, User, CheckCircle, AlertCircle, Loader2, Key, Eye, EyeOff, Wand2Icon, ArrowLeft } from 'lucide-react';
 
 const CreateUser = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,8 +60,17 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 min-h-screen font-sans text-slate-900 flex justify-center items-center">
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 w-full max-w-lg p-8">
+    <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 min-h-screen font-sans text-slate-900 flex justify-center items-center relative">
+      
+      {/* Back Button */}
+      <button 
+        onClick={() => navigate('/users')}
+        className="absolute top-6 left-6 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+      >
+        <ArrowLeft size={16} /> Back to Users
+      </button>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 w-full max-w-lg p-8 mt-12">
         
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

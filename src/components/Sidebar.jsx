@@ -23,7 +23,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Reports', icon: <FileText size={20}/>, path: '/reports' },
     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events' },
     { name: 'History', icon: <History size={20}/>, path: '/history' },
-    { name: 'Create User', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
+    { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
+    { name: 'Report Exports', icon: <UserPlus size={20}/>, path: '/report-export', adminOnly: true },
     { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
   ];
 

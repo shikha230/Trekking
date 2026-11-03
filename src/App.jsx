@@ -16,6 +16,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ChangePassword from './pages/ChangePassword';
 import CreateUser from './pages/CreateUser';
 import UsersManagement from './pages/UsersManagement';
+import ReportExport from './pages/ReportExport';
+import HistoricalPlayback from './pages/HistoricalPlayback';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const savedUser = localStorage.getItem('user') || localStorage.getItem('adminUser');
@@ -107,6 +109,8 @@ function AppContent() {
             <Route path="/users" element={<ProtectedRoute adminOnly={true}><UsersManagement /></ProtectedRoute>} />
             <Route path="/users-list" element={<ProtectedRoute adminOnly={true}><UsersManagement /></ProtectedRoute>} />
             <Route path="/create-user" element={<ProtectedRoute adminOnly={true}><CreateUser /></ProtectedRoute>} />
+            <Route path="/report-export" element={<ProtectedRoute adminOnly={true}><ReportExport /></ProtectedRoute>} />
+            <Route path="/history-playback" element={<ProtectedRoute adminOnly={true}><HistoricalPlayback /></ProtectedRoute>} />
             
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
