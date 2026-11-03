@@ -1079,7 +1079,7 @@ const LiveTracking = () => {
 
         <MapRecenter vehicles={vehicles} />
 
-        {/* Geofence Overlay Rendering */}
+        {/* 🟢 Geofence Overlay Rendering (Loading & Unloading Zones Restored) */}
         {geofences.map((gf) => {
           const type = (gf.type || gf.category || '').toLowerCase();
           const name = (gf.name || 'Zone').toUpperCase();
@@ -1231,7 +1231,7 @@ const LiveTracking = () => {
         })}
       </MapContainer>
 
-      {/* Floating Status Guide Panel (Expanded width to prevent text clipping) */}
+      {/* Floating Status Guide Panel */}
       <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-2xl p-5 rounded-3xl border border-slate-800 shadow-2xl text-xs space-y-3 font-medium min-w-[270px]">
         <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
           <Sparkles size={12} className="text-blue-400" /> Live Fleet & Zone Legend
