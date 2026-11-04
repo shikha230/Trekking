@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Map as MapIcon, Truck, MapPin, ClipboardList, FileText, History, Activity, LogOut, X, KeyRound, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Map as MapIcon, Truck, MapPin, ClipboardList, FileText, History, Activity, LogOut, X, KeyRound, UserPlus, FileSpreadsheet, Route } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -24,8 +24,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events' },
     { name: 'History', icon: <History size={20}/>, path: '/history' },
     { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
-    { name: 'Report Exports', icon: <UserPlus size={20}/>, path: '/report-export', adminOnly: true },
-    { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
+    { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export', adminOnly: true },
+    { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback', adminOnly: true },{ name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
