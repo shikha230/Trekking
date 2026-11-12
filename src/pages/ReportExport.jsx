@@ -44,19 +44,16 @@ const ReportExport = () => {
         params.append('deviceId', selectedDevice);
       }
       if (startDate) {
-        // Format ISO string for backend
-        params.append('startDate', new Date(startDate).toISOString());
+        params.append('startDate', startDate.length === 16 ? startDate + ':00' : startDate);
       }
       if (endDate) {
-        params.append('endDate', new Date(endDate).toISOString());
+        params.append('endDate', endDate.length === 16 ? endDate + ':00' : endDate);
       }
 
-      // Axios call with responseType 'blob' for file download
       const response = await axios.get(url + params.toString(), {
         responseType: 'blob',
       });
 
-      // Create a blob link to download
       const blob = new Blob([response.data], { type: 'text/csv' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
