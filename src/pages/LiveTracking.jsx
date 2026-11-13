@@ -1005,6 +1005,7 @@ const LiveTracking = () => {
               unloadedTrucks.map((truck) => {
                 const status = getTruckStatus(truck);
                 const loadVal = Number(truck.io9 || truck.load || 0);
+                const displayImei = truck.imei || truck.uniqueid || truck.device_imei || 'N/A'; //
 
                 return (
                   <div 
@@ -1024,7 +1025,7 @@ const LiveTracking = () => {
                     <div className="text-[11px] text-slate-300 space-y-1 font-mono bg-slate-900/60 p-2 rounded-xl border border-slate-800">
                       <div className="flex justify-between">
                         <span className="text-slate-400">IMEI:</span>
-                        <span className="text-white font-bold">{truck.uniqueid || 'N/A'}</span>
+                        <span className="text-white font-bold">{displayImei}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Payload (IO9):</span>
@@ -1079,7 +1080,7 @@ const LiveTracking = () => {
 
         <MapRecenter vehicles={vehicles} />
 
-        {/* 🟢 Geofence Overlay Rendering (Loading & Unloading Zones Restored) */}
+        {/* Geofence Overlay Rendering */}
         {geofences.map((gf) => {
           const type = (gf.type || gf.category || '').toLowerCase();
           const name = (gf.name || 'Zone').toUpperCase();

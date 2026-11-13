@@ -1,6 +1,10 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Map as MapIcon, Truck, MapPin, ClipboardList, FileText, History, Activity, LogOut, X, KeyRound, UserPlus, FileSpreadsheet, Route } from 'lucide-react';
+import { 
+  LayoutDashboard, Map as MapIcon, Truck, MapPin, 
+  ClipboardList, FileText, History, Activity, LogOut, 
+  X, KeyRound, UserPlus, FileSpreadsheet, Route, Navigation, ExternalLink 
+} from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -24,8 +28,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events' },
     { name: 'History', icon: <History size={20}/>, path: '/history' },
     { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
-    { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export', adminOnly: true },
-    { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback', adminOnly: true },{ name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
+    { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export', },
+    { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback', },
+    { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -36,17 +41,16 @@ const Sidebar = ({ isOpen, onClose }) => {
   });
 
   const handleLogout = () => {
-    // 🟢 Role ke hisaab se decide karein ki kahan redirect karna hai
     if (isAdmin) {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('adminUser');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      navigate('/admin-login'); // <-- Agar aapka admin login route '/admin-login' hai
+      navigate('/admin-login');
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      navigate('/login'); // <-- Normal user login route
+      navigate('/login');
     }
   };
 
@@ -103,6 +107,24 @@ const Sidebar = ({ isOpen, onClose }) => {
               </Link>
             );
           })}
+
+          {/* 🌐 TRACCAR GPS PORTAL EXTERNAL LINK */}
+         {isAdmin && (
+            <a
+              href="http://traccar-uksd.srv1882256.hstgr.cloud:8082"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-3.5 rounded-2xl font-bold text-sm text-slate-400 hover:bg-[#0A1931] hover:text-[#00A8E8] transition-all duration-300 group"
+            >
+              <div className="flex items-center gap-4">
+                <span className="opacity-70 group-hover:opacity-100 text-[#00A8E8] transition-opacity">
+                  <Navigation size={20} />
+                </span>
+                <span className="tracking-wide">Traccar Portal</span>
+              </div>
+              <ExternalLink size={14} className="text-slate-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </a>
+          )}
         </nav>
 
         <div className="p-4 border-t border-[#152B4D] space-y-3">
