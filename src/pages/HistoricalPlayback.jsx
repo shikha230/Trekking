@@ -1,115 +1,508 @@
+// import React, { useState, useEffect, useRef } from 'react';
+// import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, Circle, useMap } from 'react-leaflet';
+// import L from 'leaflet';
+// import axios from 'axios';
+// import { Play, Pause, FastForward, Rewind, ArrowLeft, Download, SlidersHorizontal, Layers } from 'lucide-react';
+// import { useNavigate, useLocation } from 'react-router-dom';
+// import 'leaflet/dist/leaflet.css';
+
+// const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
+
+// // 🎨 Traccar Speed Color Helper (Yellow -> Orange -> Red -> Dark)
+// const getSpeedColor = (speedKnots = 0) => {
+//   if (speedKnots <= 2) return '#EAB308'; // Yellow (Slow)
+//   if (speedKnots <= 5) return '#F97316'; // Orange (Medium)
+//   if (speedKnots <= 10) return '#B91C1C'; // Dark Red (Fast)
+//   return '#1E293B'; // Near Black (Very Fast / Max)
+// };
+
+// // 🚛 Traccar Replay Vehicle Pin / Arrow Marker
+// const createTraccarReplayIcon = (heading = 0) => {
+//   return L.divIcon({
+//     className: 'traccar-replay-marker',
+//     html: `
+//       <div style="transform: rotate(${heading}deg); transition: transform 0.2s linear; display: flex; align-items: center; justify-content: center;">
+//         <svg width="30" height="30" viewBox="0 0 24 24" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.5));">
+//           <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+//         </svg>
+//       </div>
+//     `,
+//     iconSize: [30, 30],
+//     iconAnchor: [15, 15],
+//   });
+// };
+
+// const MapController = ({ routeCoordinates, currentPos, isPlaying }) => {
+//   const map = useMap();
+
+//   useEffect(() => {
+//     if (routeCoordinates && routeCoordinates.length > 0) {
+//       const bounds = L.latLngBounds(routeCoordinates);
+//       map.fitBounds(bounds, {
+//         padding: [80, 80],
+//         maxZoom: 20,
+//         animate: true,
+//       });
+//     }
+//   }, [routeCoordinates, map]);
+
+//   useEffect(() => {
+//     if (isPlaying && currentPos && currentPos[0] && currentPos[1]) {
+//       map.panTo(currentPos, { animate: true, duration: 0.4 });
+//     }
+//   }, [currentPos, isPlaying, map]);
+
+//   return null;
+// };
+
+// // 🕒 Accurate IST Timezone Formatter
+// const formatISTDateTime = (isoString) => {
+//   if (!isoString) return 'N/A';
+//   try {
+//     const date = new Date(isoString);
+//     if (isNaN(date.getTime())) return isoString;
+
+//     return new Intl.DateTimeFormat('en-GB', {
+//       timeZone: 'Asia/Kolkata',
+//       day: '2-digit',
+//       month: '2-digit',
+//       year: 'numeric',
+//       hour: '2-digit',
+//       minute: '2-digit',
+//       second: '2-digit',
+//       hour12: false,
+//     }).format(date).replace(',', '');
+//   } catch (e) {
+//     return isoString;
+//   }
+// };
+
+// const calculateBearing = (lat1, lon1, lat2, lon2) => {
+//   if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return 0;
+//   const dLon = (lon2 - lon1) * (Math.PI / 180);
+//   const y = Math.sin(dLon) * Math.cos(lat2 * (Math.PI / 180));
+//   const x =
+//     Math.cos(lat1 * (Math.PI / 180)) * Math.sin(lat2 * (Math.PI / 180)) -
+//     Math.sin(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.cos(dLon);
+//   let brng = Math.atan2(y, x) * (180 / Math.PI);
+//   return (brng + 360) % 360;
+// };
+
+// const HistoricalPlayback = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const queryParams = new URLSearchParams(location.search);
+//   const preselectedDeviceId = queryParams.get('deviceId');
+
+//   const [devices, setDevices] = useState([]);
+//   const [selectedDevice, setSelectedDevice] = useState(preselectedDeviceId || '');
+//   const [period, setPeriod] = useState('custom');
+//   const [startDate, setStartDate] = useState('');
+//   const [endDate, setEndDate] = useState('');
+//   const [geofences, setGeofences] = useState([]);
+//   const [mapType, setMapType] = useState('google');
+
+//   const [playbackData, setPlaybackData] = useState([]);
+//   const [currentIndex, setCurrentIndex] = useState(0);
+//   const [isPlaying, setIsPlaying] = useState(false);
+//   const [speedMultiplier, setSpeedMultiplier] = useState(1);
+
+//   const timerRef = useRef(null);
+
+//   useEffect(() => {
+//     const now = new Date();
+//     const start = new Date(now);
+//     start.setHours(0, 0, 0, 0);
+
+//     const formatForInput = (d) => {
+//       const year = d.getFullYear();
+//       const month = String(d.getMonth() + 1).padStart(2, '0');
+//       const day = String(d.getDate()).padStart(2, '0');
+//       const hours = String(d.getHours()).padStart(2, '0');
+//       const minutes = String(d.getMinutes()).padStart(2, '0');
+//       return `${year}-${month}-${day}T${hours}:${minutes}`;
+//     };
+
+//     setStartDate(formatForInput(start));
+//     setEndDate(formatForInput(now));
+//   }, []);
+
+//   useEffect(() => {
+//     axios
+//       .get(`${API_BASE_URL}/api/trips/vehicles-list`)
+//       .then((res) => {
+//         const list = Array.isArray(res.data) ? res.data : [];
+//         setDevices(list);
+//         if (preselectedDeviceId) setSelectedDevice(preselectedDeviceId);
+//       })
+//       .catch((err) => console.error(err));
+
+//     axios
+//       .get(`${API_BASE_URL}/api/geofences`)
+//       .then((res) => setGeofences(res.data || []))
+//       .catch((err) => console.error(err));
+//   }, [preselectedDeviceId]);
+
+//   useEffect(() => {
+//     if (preselectedDeviceId && startDate && endDate) {
+//       fetchPlaybackData(preselectedDeviceId, startDate, endDate);
+//     }
+//   }, [preselectedDeviceId, startDate, endDate]);
+
+//   const fetchPlaybackData = async (devId, start, end) => {
+//     try {
+//       // Local datetime ko backend ke liye properly format karein
+//       const queryUrl = `${API_BASE_URL}/api/trips/history/${devId}?startDate=${start}:00&endDate=${end}:59`;
+//       const res = await axios.get(queryUrl);
+//       const historyArray = res.data.history || res.data;
+//       if (Array.isArray(historyArray) && historyArray.length > 0) {
+//         setPlaybackData(historyArray);
+//         setCurrentIndex(0);
+//         setIsPlaying(false);
+//       } else {
+//         setPlaybackData([]);
+//         alert('No history points found for this time range.');
+//       }
+//     } catch (err) {
+//       console.error('Failed to load history:', err);
+//     }
+//   };
+
+//   const handleShowClick = (e) => {
+//     e.preventDefault();
+//     if (!selectedDevice) {
+//       alert('Please select a device.');
+//       return;
+//     }
+//     fetchPlaybackData(selectedDevice, startDate, endDate);
+//   };
+
+//   const currentPoint = playbackData[currentIndex] || playbackData[0] || {};
+//   const nextPoint = playbackData[currentIndex + 1] || currentPoint;
+
+//   const routeCoordinates = Array.isArray(playbackData)
+//     ? playbackData.map((p) => [Number(p.latitude), Number(p.longitude)])
+//     : [];
+
+//   const currentPos =
+//     currentPoint.latitude && currentPoint.longitude
+//       ? [Number(currentPoint.latitude), Number(currentPoint.longitude)]
+//       : [22.348, 82.656];
+
+//   let heading = Number(currentPoint.course || currentPoint.heading || 0);
+//   if (!heading && playbackData.length > 1 && currentIndex < playbackData.length - 1) {
+//     heading = calculateBearing(
+//       Number(currentPoint.latitude),
+//       Number(currentPoint.longitude),
+//       Number(nextPoint.latitude),
+//       Number(nextPoint.longitude)
+//     );
+//   }
+
+//   const selectedDeviceObj = devices.find((d) => (d.traccar_id || d.id) == selectedDevice);
+//   const deviceName = selectedDeviceObj?.name || currentPoint.vehicle_name || 'CAT D81';
+
+//   const serverTimeIST = formatISTDateTime(currentPoint.devicetime || currentPoint.servertime);
+//   const ignitionVal =
+//     currentPoint.ignition !== undefined
+//       ? currentPoint.ignition
+//         ? 'ON'
+//         : 'OFF'
+//       : currentPoint.attributes?.ignition
+//       ? 'ON'
+//       : 'OFF';
+//   const io6Val = currentPoint.io6 || currentPoint.attributes?.io6 || 'N/A';
+//   const io9Val = currentPoint.io9 || currentPoint.attributes?.io9 || 'N/A';
+//   const speedVal = `${Number(currentPoint.speed_kmh || 0).toFixed(1)} km/h`;
+//   const satellitesVal = currentPoint.satellites || currentPoint.attributes?.satellites || '12';
+
+//   useEffect(() => {
+//     if (isPlaying && playbackData.length > 0) {
+//       const activeInterval = 1000 / speedMultiplier;
+//       timerRef.current = setTimeout(() => {
+//         if (currentIndex < playbackData.length - 1) {
+//           setCurrentIndex((prev) => prev + 1);
+//         } else {
+//           setIsPlaying(false);
+//           setCurrentIndex(0);
+//         }
+//       }, activeInterval);
+//     }
+//     return () => clearTimeout(timerRef.current);
+//   }, [isPlaying, currentIndex, playbackData, speedMultiplier]);
+
+//   return (
+//     <div className="relative w-full h-screen bg-[#f8f7f3] overflow-hidden font-sans flex">
+      
+//       {/* Sidebar Panel */}
+//       <div className="w-[320px] bg-white border-r border-slate-300 flex flex-col z-[2000] shadow-sm">
+//         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
+//           <button onClick={() => navigate(-1)} className="p-1 text-slate-600 hover:bg-slate-100 rounded-full cursor-pointer">
+//             <ArrowLeft size={18} />
+//           </button>
+//           <span className="text-[15px] font-medium text-slate-800">Replay</span>
+//         </div>
+
+//         <form onSubmit={handleShowClick} className="p-4 space-y-4 text-xs">
+//           <div className="border border-slate-300 rounded px-3 py-2 relative">
+//             <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">Device</label>
+//             <select
+//               value={selectedDevice}
+//               onChange={(e) => setSelectedDevice(e.target.value)}
+//               className="w-full bg-transparent text-slate-800 focus:outline-none pt-1"
+//               required
+//             >
+//               <option value="">-- Select Device --</option>
+//               {devices.map((d) => (
+//                 <option key={d.id || d.traccar_id} value={d.traccar_id || d.id}>{d.name}</option>
+//               ))}
+//             </select>
+//           </div>
+
+//           <div className="border border-slate-300 rounded px-3 py-2 relative">
+//             <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">Period</label>
+//             <select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full bg-transparent text-slate-800 focus:outline-none pt-1">
+//               <option value="custom">Custom</option>
+//               <option value="today">Today</option>
+//             </select>
+//           </div>
+
+//           <div className="border border-slate-300 rounded px-3 py-2 relative">
+//             <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">From</label>
+//             <input
+//               type="datetime-local"
+//               value={startDate}
+//               onChange={(e) => setStartDate(e.target.value)}
+//               className="w-full bg-transparent text-slate-800 focus:outline-none pt-1 text-xs"
+//               required
+//             />
+//           </div>
+
+//           <div className="border border-slate-300 rounded px-3 py-2 relative">
+//             <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">To</label>
+//             <input
+//               type="datetime-local"
+//               value={endDate}
+//               onChange={(e) => setEndDate(e.target.value)}
+//               className="w-full bg-transparent text-slate-800 focus:outline-none pt-1 text-xs"
+//               required
+//             />
+//           </div>
+
+//           <button type="submit" className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-medium py-2.5 rounded shadow-sm transition cursor-pointer text-xs tracking-wider">
+//             SHOW
+//           </button>
+//         </form>
+
+//         {playbackData.length > 0 && (
+//           <div className="mx-4 mt-2 p-3 bg-slate-50 rounded border border-slate-200 space-y-2.5">
+//             <div className="text-center text-xs font-bold text-slate-700">{deviceName}</div>
+
+//             <div className="relative flex items-center">
+//               <input
+//                 type="range"
+//                 min={0}
+//                 max={playbackData.length - 1}
+//                 value={currentIndex}
+//                 onChange={(e) => {
+//                   setIsPlaying(false);
+//                   setCurrentIndex(Number(e.target.value));
+//                 }}
+//                 className="w-full accent-blue-600 cursor-pointer h-1 bg-slate-300 rounded-lg"
+//               />
+//             </div>
+
+//             <div className="flex items-center justify-between text-[11px] text-slate-600">
+//               <span className="font-medium">{currentIndex + 1}/{playbackData.length}</span>
+
+//               <div className="flex items-center gap-2.5 text-slate-700">
+//                 <button onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))} className="cursor-pointer"><Rewind size={13} fill="currentColor" /></button>
+//                 <button onClick={() => setIsPlaying(!isPlaying)} className="cursor-pointer text-blue-600">
+//                   {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+//                 </button>
+//                 <button onClick={() => setCurrentIndex((prev) => Math.min(playbackData.length - 1, prev + 1))} className="cursor-pointer"><FastForward size={13} fill="currentColor" /></button>
+//               </div>
+
+//               <span className="text-[10px] text-slate-500 font-mono">{serverTimeIST}</span>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+
+//       {/* Map Area */}
+//       <div className="flex-1 h-full relative">
+//         <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">
+//           <button onClick={() => setMapType(mapType === 'google' ? 'satellite' : 'google')} className="bg-white p-2 rounded shadow border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer">
+//             <Layers size={16} />
+//           </button>
+//         </div>
+
+//         <div className="absolute bottom-6 left-3 z-[1000] bg-white px-2 py-1.5 rounded border border-slate-300 shadow-sm text-[10px]">
+//           <div className="w-16 h-2 bg-gradient-to-r from-blue-400 via-yellow-400 to-red-600 rounded-xs mb-0.5"></div>
+//           <div className="text-center font-medium text-slate-600">0 - 10 kn</div>
+//         </div>
+
+//         <MapContainer center={currentPos} zoom={18} maxZoom={22} zoomControl={false} className="w-full h-full z-0">
+//           {mapType === 'satellite' ? (
+//             <TileLayer maxNativeZoom={19} maxZoom={22} url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+//           ) : (
+//             <TileLayer maxNativeZoom={20} maxZoom={22} url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" />
+//           )}
+
+//           <MapController routeCoordinates={routeCoordinates} currentPos={currentPos} isPlaying={isPlaying} />
+
+//           {geofences.map((gf) => {
+//             const isUnloading = (gf.type || gf.category || '').toLowerCase() === 'unloading';
+//             const color = isUnloading ? '#A855F7' : '#3B82F6';
+//             if (gf.coordinates && Array.isArray(gf.coordinates)) {
+//               return <Polygon key={gf.id || gf.name} positions={gf.coordinates} pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 2, dashArray: '4, 4' }} />;
+//             }
+//             if (gf.latitude && gf.longitude && gf.radius) {
+//               return <Circle key={gf.id || gf.name} center={[Number(gf.latitude), Number(gf.longitude)]} radius={Number(gf.radius)} pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 2, dashArray: '4, 4' }} />;
+//             }
+//             return null;
+//           })}
+
+//           {playbackData.length > 1 && playbackData.map((pt, idx) => {
+//             if (idx === playbackData.length - 1) return null;
+//             const nextPt = playbackData[idx + 1];
+//             const p1 = [Number(pt.latitude), Number(pt.longitude)];
+//             const p2 = [Number(nextPt.latitude), Number(nextPt.longitude)];
+//             const segmentColor = getSpeedColor(Number(pt.speed || 0));
+//             const angle = calculateBearing(p1[0], p1[1], p2[0], p2[1]);
+
+//             const arrowIcon = L.divIcon({
+//               className: 'route-arrow-icon',
+//               html: `<div style="transform: rotate(${angle - 90}deg); color: ${segmentColor}; font-size: 11px; line-height: 1; font-weight: bold;">▶</div>`,
+//               iconSize: [12, 12],
+//               iconAnchor: [6, 6],
+//             });
+
+//             return (
+//               <React.Fragment key={`seg-${idx}`}>
+//                 <Polyline positions={[p1, p2]} pathOptions={{ color: segmentColor, weight: 3, opacity: 0.95 }} />
+//                 <Marker position={p2} icon={arrowIcon} interactive={false} />
+//               </React.Fragment>
+//             );
+//           })}
+
+//           {currentPoint.latitude && (
+//             <Marker position={currentPos} icon={createTraccarReplayIcon(heading)}>
+//               <Popup className="custom-popup" autoPan={false}>
+//                 <div className="p-3 bg-slate-950 text-white rounded-xl shadow-xl border border-slate-800 text-xs space-y-2 min-w-[210px]">
+//                   <div className="text-center font-bold pb-1.5 border-b border-slate-800 text-amber-400">{deviceName}</div>
+//                   <div className="space-y-1 text-[11px]">
+//                     <div className="flex justify-between"><span className="text-slate-400">Server Time:</span> <span className="font-mono text-slate-200">{serverTimeIST}</span></div>
+//                     <div className="flex justify-between"><span className="text-slate-400">Ignition:</span> <span className="font-bold text-emerald-400">{ignitionVal}</span></div>
+//                     <div className="flex justify-between"><span className="text-slate-400">Load Status:</span> <span className="font-mono text-cyan-400 font-bold">{io6Val}</span></div>
+//                     <div className="flex justify-between"><span className="text-slate-400">Dala Position:</span> <span className="font-mono text-blue-400 font-bold">{io9Val}</span></div>
+//                     <div className="flex justify-between"><span className="text-slate-400">Speed:</span> <span className="font-mono text-amber-400 font-bold">{speedVal}</span></div>
+//                     <div className="flex justify-between"><span className="text-slate-400">Satellites:</span> <span className="font-mono text-purple-400 font-bold">{satellitesVal}</span></div>
+//                   </div>
+//                 </div>
+//               </Popup>
+//             </Marker>
+//           )}
+//         </MapContainer>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default HistoricalPlayback;
+
+
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, Circle, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
-import { Play, Pause, RotateCcw, FastForward, Clock, Truck as TruckIcon, MapPin, Gauge, Activity, Route } from 'lucide-react';
+import { Play, Pause, FastForward, Rewind, ArrowLeft, Download, SlidersHorizontal, Layers } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
-// 🚛 Custom Dynamic Truck Replay Marker Icon with Cargo Bed Color (Mitti/Material)
-const createReplayTruckIcon = (heading = 0, isLoaded = false) => {
-  const cargoColor = isLoaded ? '#8B5A2B' : '#94A3B8';
-  const badgeText = isLoaded ? 'LOADED' : 'EMPTY';
-  const badgeBg = isLoaded ? '#16A34A' : '#64748B';
+// 🎨 Traccar Speed Color Helper (Yellow -> Orange -> Red -> Dark)
+const getSpeedColor = (speedKnots = 0) => {
+  if (speedKnots <= 2) return '#EAB308'; // Yellow (Slow)
+  if (speedKnots <= 5) return '#F97316'; // Orange (Medium)
+  if (speedKnots <= 10) return '#B91C1C'; // Dark Red (Fast)
+  return '#1E293B'; // Near Black (Very Fast / Max)
+};
 
+// 🚛 Traccar Replay Vehicle Pin / Arrow Marker
+const createTraccarReplayIcon = (heading = 0) => {
   return L.divIcon({
-    className: 'replay-truck-marker',
+    className: 'traccar-replay-marker',
     html: `
-      <div style="transform: rotate(${heading}deg); transition: transform 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <div style="
-          background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
-          border: 2.5px solid ${isLoaded ? '#22C55E' : '#FFFFFF'};
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-        ">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-          
-          <div style="
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            width: 13px;
-            height: 10px;
-            background-color: ${cargoColor};
-            border-radius: 2px;
-            border: 1px solid rgba(255,255,255,0.4);
-          "></div>
-        </div>
-        <span style="
-          background-color: ${badgeBg};
-          color: white;
-          font-size: 8px;
-          font-weight: 900;
-          padding: 1px 5px;
-          border-radius: 6px;
-          margin-top: 3px;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-          letter-spacing: 0.5px;
-        ">${badgeText}</span>
+      <div style="transform: rotate(${heading}deg); transition: transform 0.2s linear; display: flex; align-items: center; justify-content: center;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.5));">
+          <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+        </svg>
       </div>
     `,
-    iconSize: [44, 60],
-    iconAnchor: [22, 30],
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
   });
 };
 
-const MapRecenter = ({ coords }) => {
+// 🔍 Smooth Pan During Play (Manual Zoom Enabled without restriction)
+const MapController = ({ currentPos, isPlaying }) => {
   const map = useMap();
+
   useEffect(() => {
-    if (coords && coords.length > 0) {
-      map.setView(coords, 18, { animate: true });
+    if (isPlaying && currentPos && currentPos[0] && currentPos[1]) {
+      map.panTo(currentPos, { animate: true, duration: 0.4 });
     }
-  }, [coords, map]);
+  }, [currentPos, isPlaying, map]);
+
   return null;
 };
 
-const formatDateTime = (isoString) => {
+// 🕒 Accurate IST Timezone Formatter
+const formatISTDateTime = (isoString) => {
   if (!isoString) return 'N/A';
   try {
     const date = new Date(isoString);
-    return date.toLocaleString('en-IN', { 
+    if (isNaN(date.getTime())) return isoString;
+
+    return new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Kolkata',
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true 
-    });
+      hour12: false,
+    }).format(date).replace(',', '');
   } catch (e) {
     return isoString;
   }
 };
 
-const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
+const calculateBearing = (lat1, lon1, lat2, lon2) => {
+  if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return 0;
   const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  const y = Math.sin(dLon) * Math.cos(lat2 * (Math.PI / 180));
+  const x =
+    Math.cos(lat1 * (Math.PI / 180)) * Math.sin(lat2 * (Math.PI / 180)) -
+    Math.sin(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.cos(dLon);
+  let brng = Math.atan2(y, x) * (180 / Math.PI);
+  return (brng + 360) % 360;
 };
 
 const HistoricalPlayback = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const preselectedDeviceId = queryParams.get('deviceId');
+
   const [devices, setDevices] = useState([]);
-  const [selectedDevice, setSelectedDevice] = useState('');
-  const [selectionMode, setSelectionMode] = useState('completed_trip');
-  
+  const [selectedDevice, setSelectedDevice] = useState(preselectedDeviceId || '');
+  const [period, setPeriod] = useState('custom');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [tripDateFilter, setTripDateFilter] = useState('');
-  const [completedTrips, setCompletedTrips] = useState([]);
-  const [selectedTrip, setSelectedTrip] = useState('');
   const [geofences, setGeofences] = useState([]);
   const [mapType, setMapType] = useState('google');
 
@@ -117,148 +510,121 @@ const HistoricalPlayback = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
-  const [currentAddress, setCurrentAddress] = useState('Kusmunda Mine Area');
-  
-  const [totalDistance, setTotalDistance] = useState(0);
-  const [coveredDistance, setCoveredDistance] = useState(0);
-  
+
   const timerRef = useRef(null);
-  const geocodeTimeoutRef = useRef(null);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/trips/vehicles-list`)
-      .then(res => setDevices(Array.isArray(res.data) ? res.data : []))
-      .catch(err => console.error('Error fetching vehicles list:', err));
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
 
-    axios.get(`${API_BASE_URL}/api/trips/trip?page=1&limit=100`)
-      .then(res => {
-        const tripsArr = res.data.trips || res.data;
-        const validCompletedTrips = Array.isArray(tripsArr) 
-          ? tripsArr.filter(t => (t.status || '').toUpperCase() === 'COMPLETED') 
-          : [];
-        setCompletedTrips(validCompletedTrips);
-      })
-      .catch(err => console.error('Error fetching completed trips:', err));
+    const formatForInput = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
-    axios.get(`${API_BASE_URL}/api/geofences`)
-      .then(res => setGeofences(res.data || []))
-      .catch(err => console.error('Error fetching geofences:', err));
+    setStartDate(formatForInput(start));
+    setEndDate(formatForInput(now));
   }, []);
 
-  const handleFetchPlayback = async (e) => {
-    e.preventDefault();
-    try {
-      let queryUrl = '';
-      if (selectionMode === 'completed_trip' && selectedTrip) {
-        const tripObj = completedTrips.find(t => (t.id || t.tripId) == selectedTrip);
-        if (tripObj) {
-          const devId = tripObj.vehicle_id || tripObj.deviceid;
-          const sTime = tripObj.start_time;
-          const eTime = tripObj.end_time;
-          queryUrl = `${API_BASE_URL}/api/trips/history/${devId}?startDate=${sTime}&endDate=${eTime}`;
-        } else {
-          queryUrl = `${API_BASE_URL}/api/trips/history/${selectedTrip}`;
-        }
-      } else {
-        queryUrl = `${API_BASE_URL}/api/trips/history/${selectedDevice}?startDate=${startDate}&endDate=${endDate}`;
-      }
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/trips/vehicles-list`)
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setDevices(list);
+        if (preselectedDeviceId) setSelectedDevice(preselectedDeviceId);
+      })
+      .catch((err) => console.error(err));
 
+    axios
+      .get(`${API_BASE_URL}/api/geofences`)
+      .then((res) => setGeofences(res.data || []))
+      .catch((err) => console.error(err));
+  }, [preselectedDeviceId]);
+
+  useEffect(() => {
+    if (preselectedDeviceId && startDate && endDate) {
+      fetchPlaybackData(preselectedDeviceId, startDate, endDate);
+    }
+  }, [preselectedDeviceId, startDate, endDate]);
+
+  const fetchPlaybackData = async (devId, start, end) => {
+    try {
+      const queryUrl = `${API_BASE_URL}/api/trips/history/${devId}?startDate=${start}:00&endDate=${end}:59`;
       const res = await axios.get(queryUrl);
       const historyArray = res.data.history || res.data;
-      setPlaybackData(Array.isArray(historyArray) ? historyArray : []);
-      
-      if (Array.isArray(historyArray) && historyArray.length > 1) {
-        let total = 0;
-        for (let i = 0; i < historyArray.length - 1; i++) {
-          total += getDistanceFromLatLonInKm(
-            Number(historyArray[i].latitude), Number(historyArray[i].longitude),
-            Number(historyArray[i+1].latitude), Number(historyArray[i+1].longitude)
-          );
-        }
-        setTotalDistance(total);
+      if (Array.isArray(historyArray) && historyArray.length > 0) {
+        setPlaybackData(historyArray);
+        setCurrentIndex(0);
+        setIsPlaying(false);
       } else {
-        setTotalDistance(0);
+        setPlaybackData([]);
+        alert('No history points found for this time range.');
       }
-
-      setCoveredDistance(0);
-      setCurrentIndex(0);
-      setIsPlaying(false);
     } catch (err) {
-      alert('Failed to load playback data for the selected filter.');
-      console.error(err);
+      console.error('Failed to load history:', err);
     }
   };
 
+  const handleShowClick = (e) => {
+    e.preventDefault();
+    if (!selectedDevice) {
+      alert('Please select a device.');
+      return;
+    }
+    fetchPlaybackData(selectedDevice, startDate, endDate);
+  };
+
   const currentPoint = playbackData[currentIndex] || playbackData[0] || {};
-  const routeCoordinates = Array.isArray(playbackData) ? playbackData.map(p => [Number(p.latitude), Number(p.longitude)]) : [];
-  const currentPos = currentPoint.latitude ? [Number(currentPoint.latitude), Number(currentPoint.longitude)] : [22.348, 82.656];
+  const nextPoint = playbackData[currentIndex + 1] || currentPoint;
 
-  const io9Val = Number(currentPoint.io9 ?? currentPoint.attributes?.io9 ?? 0);
-  const isLoaded = io9Val >= 1000;
+  const routeCoordinates = Array.isArray(playbackData)
+    ? playbackData.map((p) => [Number(p.latitude), Number(p.longitude)])
+    : [];
 
-  useEffect(() => {
-    if (playbackData.length > 1 && currentIndex > 0) {
-      let covered = 0;
-      for (let i = 0; i < currentIndex; i++) {
-        covered += getDistanceFromLatLonInKm(
-          Number(playbackData[i].latitude), Number(playbackData[i].longitude),
-          Number(playbackData[i+1].latitude), Number(playbackData[i+1].longitude)
-        );
-      }
-      setCoveredDistance(covered);
-    } else {
-      setCoveredDistance(0);
-    }
-  }, [currentIndex, playbackData]);
+  const currentPos =
+    currentPoint.latitude && currentPoint.longitude
+      ? [Number(currentPoint.latitude), Number(currentPoint.longitude)]
+      : [22.348, 82.656];
 
-  const filteredCompletedTrips = completedTrips.filter(trip => {
-    if (!tripDateFilter) return true;
-    const tripDate = (trip.start_time || '').split('T')[0];
-    return tripDate === tripDateFilter;
-  });
+  let heading = Number(currentPoint.course || currentPoint.heading || 0);
+  if (!heading && playbackData.length > 1 && currentIndex < playbackData.length - 1) {
+    heading = calculateBearing(
+      Number(currentPoint.latitude),
+      Number(currentPoint.longitude),
+      Number(nextPoint.latitude),
+      Number(nextPoint.longitude)
+    );
+  }
 
-  // ⚡ Throttled & Debounced Geocoding to prevent 429 Too Many Requests error
-  useEffect(() => {
-    if (currentPoint) {
-      if (currentPoint.address && currentPoint.address.trim() !== '') {
-        setCurrentAddress(currentPoint.address);
-        return;
-      }
+  const selectedDeviceObj = devices.find((d) => (d.traccar_id || d.id) == selectedDevice);
+  const deviceName = selectedDeviceObj?.name || currentPoint.vehicle_name || 'CAT D81';
 
-      if (currentPoint.latitude && currentPoint.longitude) {
-        const lat = currentPoint.latitude;
-        const lon = currentPoint.longitude;
-
-        if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
-
-        geocodeTimeoutRef.current = setTimeout(() => {
-          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`)
-            .then(response => response.json())
-            .then(data => {
-              if (data && data.display_name) {
-                const parts = data.display_name.split(',');
-                const shortAddress = parts.slice(0, 3).join(',').trim();
-                setCurrentAddress(shortAddress || data.display_name);
-              } else {
-                setCurrentAddress(`Kusmunda Mining Area (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`);
-              }
-            })
-            .catch(() => {
-              setCurrentAddress(`Kusmunda Area (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`);
-            });
-        }, 800); // 800ms debounce delay to protect API limits
-      }
-    }
-  }, [currentIndex, playbackData]);
+  const serverTimeIST = formatISTDateTime(currentPoint.devicetime || currentPoint.servertime);
+  const ignitionVal =
+    currentPoint.ignition !== undefined
+      ? currentPoint.ignition
+        ? 'ON'
+        : 'OFF'
+      : currentPoint.attributes?.ignition
+      ? 'ON'
+      : 'OFF';
+  const io6Val = currentPoint.io6 || currentPoint.attributes?.io6 || 'N/A';
+  const io9Val = currentPoint.io9 || currentPoint.attributes?.io9 || 'N/A';
+  const speedVal = `${Number(currentPoint.speed_kmh || 0).toFixed(1)} km/h`;
+  const satellitesVal = currentPoint.satellites || currentPoint.attributes?.satellites || '12';
 
   useEffect(() => {
     if (isPlaying && playbackData.length > 0) {
-      const baseInterval = 1000;
-      const activeInterval = baseInterval / speedMultiplier;
-
+      const activeInterval = 1000 / speedMultiplier;
       timerRef.current = setTimeout(() => {
         if (currentIndex < playbackData.length - 1) {
-          setCurrentIndex(prev => prev + 1);
+          setCurrentIndex((prev) => prev + 1);
         } else {
           setIsPlaying(false);
           setCurrentIndex(0);
@@ -269,315 +635,179 @@ const HistoricalPlayback = () => {
   }, [isPlaying, currentIndex, playbackData, speedMultiplier]);
 
   return (
-    <div className="relative w-full h-screen bg-slate-950 overflow-hidden font-sans flex flex-col">
+    <div className="relative w-full h-screen bg-[#f8f7f3] overflow-hidden font-sans flex">
       
-      {/* Top-Left Control Panel */}
-      <div className="absolute top-5 left-5 z-[1000] bg-slate-900/95 backdrop-blur-xl p-4.5 rounded-2xl border border-slate-800 shadow-2xl w-[380px] space-y-3.5">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-600 rounded-xl text-white shadow-md">
-              <Clock size={16} />
-            </div>
-            <h2 className="text-xs font-black uppercase tracking-wider text-white">Historical Replay</h2>
-          </div>
-          
-          <div className="flex gap-1 bg-slate-800 p-1 rounded-xl text-[10px] font-black">
-            <button 
-              onClick={() => setSelectionMode('completed_trip')}
-              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${selectionMode === 'completed_trip' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              Completed Trip
-            </button>
-            <button 
-              onClick={() => setSelectionMode('custom')}
-              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${selectionMode === 'custom' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              Custom
-            </button>
-          </div>
+      {/* Sidebar Panel */}
+      <div className="w-[320px] bg-white border-r border-slate-300 flex flex-col z-[2000] shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
+          <button onClick={() => navigate(-1)} className="p-1 text-slate-600 hover:bg-slate-100 rounded-full cursor-pointer">
+            <ArrowLeft size={18} />
+          </button>
+          <span className="text-[15px] font-medium text-slate-800">Replay</span>
         </div>
 
-        <form onSubmit={handleFetchPlayback} className="space-y-2.5 text-xs">
-          {selectionMode === 'completed_trip' ? (
-            <>
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Filter by Date</label>
-                <input 
-                  type="date" 
-                  value={tripDateFilter} 
-                  onChange={(e) => setTripDateFilter(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-blue-500 text-xs"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Select Completed Trip ({filteredCompletedTrips.length} Available)</label>
-                <select 
-                  value={selectedTrip} 
-                  onChange={(e) => setSelectedTrip(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-blue-500 text-xs"
-                  required
-                >
-                  <option value="">-- Choose Completed Trip --</option>
-                  {filteredCompletedTrips.map((trip, idx) => (
-                    <option key={trip.id || idx} value={trip.id || idx}>
-                      {trip.vehicle_name || trip.device_name || `Truck`} ({formatDateTime(trip.start_time)}) [COMPLETED]
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Select Truck / Device</label>
-                <select 
-                  value={selectedDevice} 
-                  onChange={(e) => setSelectedDevice(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-blue-500 text-xs"
-                  required
-                >
-                  <option value="">-- Choose Truck --</option>
-                  {devices.map(d => (
-                    <option key={d.id || d.traccar_id} value={d.id || d.traccar_id}>
-                      {d.name} (IMEI: {d.uniqueid || d.traccar_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Start Date & Time</label>
-                <input 
-                  type="datetime-local" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-blue-500 text-xs"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">End Date & Time</label>
-                <input 
-                  type="datetime-local" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-blue-500 text-xs"
-                  required
-                />
-              </div>
-            </>
-          )}
+        <form onSubmit={handleShowClick} className="p-4 space-y-4 text-xs">
+          <div className="border border-slate-300 rounded px-3 py-2 relative">
+            <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">Device</label>
+            <select
+              value={selectedDevice}
+              onChange={(e) => setSelectedDevice(e.target.value)}
+              className="w-full bg-transparent text-slate-800 focus:outline-none pt-1"
+              required
+            >
+              <option value="">-- Select Device --</option>
+              {devices.map((d) => (
+                <option key={d.id || d.traccar_id} value={d.traccar_id || d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
 
-          <button 
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-2.5 rounded-xl shadow-lg transition-all cursor-pointer mt-1"
-          >
-            Load Playback Route
+          <div className="border border-slate-300 rounded px-3 py-2 relative">
+            <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">Period</label>
+            <select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full bg-transparent text-slate-800 focus:outline-none pt-1">
+              <option value="custom">Custom</option>
+              <option value="today">Today</option>
+            </select>
+          </div>
+
+          <div className="border border-slate-300 rounded px-3 py-2 relative">
+            <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">From</label>
+            <input
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full bg-transparent text-slate-800 focus:outline-none pt-1 text-xs"
+              required
+            />
+          </div>
+
+          <div className="border border-slate-300 rounded px-3 py-2 relative">
+            <label className="absolute -top-2 left-2 bg-white px-1 text-[11px] text-slate-500 font-medium">To</label>
+            <input
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full bg-transparent text-slate-800 focus:outline-none pt-1 text-xs"
+              required
+            />
+          </div>
+
+          <button type="submit" className="w-full bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-medium py-2.5 rounded shadow-sm transition cursor-pointer text-xs tracking-wider">
+            SHOW
           </button>
         </form>
-      </div>
 
-      {/* Top-Right Controls */}
-      <div className="absolute top-5 right-5 z-[1000] flex flex-col items-end gap-3 pointer-events-none">
-        
-        {/* Map Type Switcher */}
-        <div className="pointer-events-auto bg-slate-900/95 backdrop-blur-xl p-1 rounded-xl border border-slate-800 shadow-2xl flex gap-1">
-          <button
-            onClick={() => setMapType('google')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-              mapType === 'google' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Google Map
-          </button>
-          <button
-            onClick={() => setMapType('satellite')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-              mapType === 'satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Satellite
-          </button>
-        </div>
-
-        {/* Telemetry HUD Card with Load Status & Distance */}
         {playbackData.length > 0 && (
-          <div className="pointer-events-auto bg-slate-900/95 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-800 shadow-2xl text-xs space-y-2 w-[310px] text-white">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <span className="font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-                <Activity size={13} className="animate-pulse text-emerald-400" /> Live HUD
-              </span>
-              <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                {currentIndex + 1} / {playbackData.length}
-              </span>
+          <div className="mx-4 mt-2 p-3 bg-slate-50 rounded border border-slate-200 space-y-2.5">
+            <div className="text-center text-xs font-bold text-slate-700">{deviceName}</div>
+
+            <div className="relative flex items-center">
+              <input
+                type="range"
+                min={0}
+                max={playbackData.length - 1}
+                value={currentIndex}
+                onChange={(e) => {
+                  setIsPlaying(false);
+                  setCurrentIndex(Number(e.target.value));
+                }}
+                className="w-full accent-blue-600 cursor-pointer h-1 bg-slate-300 rounded-lg"
+              />
             </div>
-            <div className="space-y-1.5 font-medium text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Truck:</span>
-                <span className="font-bold">{currentPoint.vehicle_name || currentPoint.device_name || 'Unit'}</span>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-600">
+              <span className="font-medium">{currentIndex + 1}/{playbackData.length}</span>
+
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <button onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))} className="cursor-pointer"><Rewind size={13} fill="currentColor" /></button>
+                <button onClick={() => setIsPlaying(!isPlaying)} className="cursor-pointer text-blue-600">
+                  {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                </button>
+                <button onClick={() => setCurrentIndex((prev) => Math.min(playbackData.length - 1, prev + 1))} className="cursor-pointer"><FastForward size={13} fill="currentColor" /></button>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Material Status:</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${isLoaded ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-slate-700 text-slate-300'}`}>
-                  {isLoaded ? '🟢 LOADED (Mitti Bhari)' : '⚪ UNLOADED (Khali)'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Speed:</span>
-                <span className="font-mono text-emerald-400 font-bold">{Number(currentPoint.speed || 0).toFixed(1)} km/h</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Covered / Total:</span>
-                <span className="font-mono text-cyan-400 font-bold flex items-center gap-1">
-                  <Route size={12} /> {coveredDistance.toFixed(2)} / {totalDistance.toFixed(2)} km
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Time:</span>
-                <span className="font-mono text-blue-300 text-[10px]">{formatDateTime(currentPoint.devicetime || currentPoint.servertime)}</span>
-              </div>
-              <div className="pt-1 border-t border-slate-800 space-y-0.5">
-                <span className="text-slate-400 flex items-center gap-1 font-bold text-[10px]">
-                  <MapPin size={11} className="text-rose-400 shrink-0" /> Location:
-                </span>
-                <p className="text-[10px] text-slate-200 font-normal bg-slate-800/80 p-2 rounded-xl border border-slate-700/50 leading-tight">
-                  {currentAddress}
-                </p>
-              </div>
+
+              <span className="text-[10px] text-slate-500 font-mono">{serverTimeIST}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Map Replay Canvas */}
-      <div className="flex-1 w-full h-full relative">
-        <MapContainer center={currentPos} zoom={18} zoomControl={false} className="w-full h-full z-0">
+      {/* Map Area */}
+      <div className="flex-1 h-full relative">
+        <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">
+          <button onClick={() => setMapType(mapType === 'google' ? 'satellite' : 'google')} className="bg-white p-2 rounded shadow border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer">
+            <Layers size={16} />
+          </button>
+        </div>
+
+        <div className="absolute bottom-6 left-3 z-[1000] bg-white px-2 py-1.5 rounded border border-slate-300 shadow-sm text-[10px]">
+          <div className="w-16 h-2 bg-gradient-to-r from-blue-400 via-yellow-400 to-red-600 rounded-xs mb-0.5"></div>
+          <div className="text-center font-medium text-slate-600">0 - 10 kn</div>
+        </div>
+
+        <MapContainer center={currentPos} zoom={19} maxZoom={22} zoomControl={true} className="w-full h-full z-0">
           {mapType === 'satellite' ? (
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="&copy; Esri"
-            />
+            <TileLayer maxNativeZoom={19} maxZoom={22} url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
           ) : (
-            <TileLayer
-              url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-              attribution="&copy; Google Maps"
-            />
+            <TileLayer maxNativeZoom={20} maxZoom={22} url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" />
           )}
 
-          <MapRecenter coords={currentPos} />
+          <MapController currentPos={currentPos} isPlaying={isPlaying} />
 
           {geofences.map((gf) => {
-            const type = (gf.type || gf.category || '').toLowerCase();
-            const name = (gf.name || 'Zone').toUpperCase();
-            const isUnloading = type === 'unloading';
-            const strokeColor = isUnloading ? '#A855F7' : '#3B82F6';
-            const fillColor = isUnloading ? '#C084FC' : '#60A5FA';
-
-            if (gf.coordinates && Array.isArray(gf.coordinates) && gf.coordinates.length > 0) {
-              return (
-                <Polygon
-                  key={gf.id || gf.name}
-                  positions={gf.coordinates}
-                  pathOptions={{ color: strokeColor, fillColor: fillColor, fillOpacity: 0.25, weight: 2.5, dashArray: '6, 6' }}
-                >
-                  <Tooltip permanent direction="center" opacity={0.95}>
-                    <span className="font-black text-[9px] text-slate-900 px-2 py-0.5 bg-white/95 rounded border shadow">
-                      {name}
-                    </span>
-                  </Tooltip>
-                </Polygon>
-              );
+            const isUnloading = (gf.type || gf.category || '').toLowerCase() === 'unloading';
+            const color = isUnloading ? '#A855F7' : '#3B82F6';
+            if (gf.coordinates && Array.isArray(gf.coordinates)) {
+              return <Polygon key={gf.id || gf.name} positions={gf.coordinates} pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 2, dashArray: '4, 4' }} />;
             }
-
             if (gf.latitude && gf.longitude && gf.radius) {
-              return (
-                <Circle
-                  key={gf.id || gf.name}
-                  center={[Number(gf.latitude), Number(gf.longitude)]}
-                  radius={Number(gf.radius)}
-                  pathOptions={{ color: strokeColor, fillColor: fillColor, fillOpacity: 0.25, weight: 2.5, dashArray: '6, 6' }}
-                >
-                  <Tooltip permanent direction="center" opacity={0.95}>
-                    <span className="font-black text-[9px] text-slate-900 px-2 py-0.5 bg-white/95 rounded border shadow">
-                      {name}
-                    </span>
-                  </Tooltip>
-                </Circle>
-              );
+              return <Circle key={gf.id || gf.name} center={[Number(gf.latitude), Number(gf.longitude)]} radius={Number(gf.radius)} pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 2, dashArray: '4, 4' }} />;
             }
             return null;
           })}
 
-          {routeCoordinates.length > 0 && (
-            <Polyline positions={routeCoordinates} pathOptions={{ color: '#2563EB', weight: 4.5, opacity: 0.9 }} />
-          )}
+          {playbackData.length > 1 && playbackData.map((pt, idx) => {
+            if (idx === playbackData.length - 1) return null;
+            const nextPt = playbackData[idx + 1];
+            const p1 = [Number(pt.latitude), Number(pt.longitude)];
+            const p2 = [Number(nextPt.latitude), Number(nextPt.longitude)];
+            const segmentColor = getSpeedColor(Number(pt.speed || 0));
+            const angle = calculateBearing(p1[0], p1[1], p2[0], p2[1]);
+
+            const arrowIcon = L.divIcon({
+              className: 'route-arrow-icon',
+              html: `<div style="transform: rotate(${angle - 90}deg); color: ${segmentColor}; font-size: 11px; line-height: 1; font-weight: bold;">▶</div>`,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6],
+            });
+
+            return (
+              <React.Fragment key={`seg-${idx}`}>
+                <Polyline positions={[p1, p2]} pathOptions={{ color: segmentColor, weight: 3, opacity: 0.95 }} />
+                <Marker position={p2} icon={arrowIcon} interactive={false} />
+              </React.Fragment>
+            );
+          })}
 
           {currentPoint.latitude && (
-            <Marker position={currentPos} icon={createReplayTruckIcon(currentPoint.course || 0, isLoaded)}>
-              <Popup className="custom-popup">
-                <div className="p-3 bg-slate-900 text-white rounded-xl text-xs space-y-1.5 font-sans min-w-[200px]">
-                  <p className="font-black text-sm text-amber-400">{currentPoint.vehicle_name || currentPoint.device_name || 'Truck Unit'}</p>
-                  <p className="text-slate-300"><b>Status:</b> {isLoaded ? '🟢 LOADED (Mitti)' : '⚪ UNLOADED'}</p>
-                  <p className="text-slate-300"><b>Time:</b> {formatDateTime(currentPoint.devicetime || currentPoint.servertime)}</p>
-                  <p className="text-slate-300"><b>Speed:</b> {Number(currentPoint.speed || 0).toFixed(1)} km/h</p>
-                  <p className="text-slate-300"><b>Covered:</b> {coveredDistance.toFixed(2)} / {totalDistance.toFixed(2)} km</p>
-                  <p className="text-slate-300"><b>Location:</b> {currentAddress}</p>
+            <Marker position={currentPos} icon={createTraccarReplayIcon(heading)}>
+              <Popup className="custom-popup" autoPan={false}>
+                <div className="p-3 bg-slate-950 text-white rounded-xl shadow-xl border border-slate-800 text-xs space-y-2 min-w-[210px]">
+                  <div className="text-center font-bold pb-1.5 border-b border-slate-800 text-amber-400">{deviceName}</div>
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between"><span className="text-slate-400">Server Time:</span> <span className="font-mono text-slate-200">{serverTimeIST}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">Ignition:</span> <span className="font-bold text-emerald-400">{ignitionVal}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">Load Status:</span> <span className="font-mono text-cyan-400 font-bold">{io6Val}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">Dala Position:</span> <span className="font-mono text-blue-400 font-bold">{io9Val}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">Speed:</span> <span className="font-mono text-amber-400 font-bold">{speedVal}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">Satellites:</span> <span className="font-mono text-purple-400 font-bold">{satellitesVal}</span></div>
+                  </div>
                 </div>
               </Popup>
             </Marker>
           )}
         </MapContainer>
       </div>
-
-      {/* Bottom Playback Control Dock */}
-      {playbackData.length > 0 && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/95 backdrop-blur-xl px-5 py-3 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-5 w-[680px]">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-            </button>
-            <button 
-              onClick={() => { setIsPlaying(false); setCurrentIndex(0); }}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all cursor-pointer"
-            >
-              <RotateCcw size={18} />
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-1">
-            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              <span>{formatDateTime(playbackData[0]?.devicetime || playbackData[0]?.servertime)}</span>
-              <span className="text-blue-400">{formatDateTime(currentPoint.devicetime || currentPoint.servertime)}</span>
-              <span>{formatDateTime(playbackData[playbackData.length - 1]?.devicetime || playbackData[playbackData.length - 1]?.servertime)}</span>
-            </div>
-            <input 
-              type="range" 
-              min={0} 
-              max={playbackData.length - 1} 
-              value={currentIndex} 
-              onChange={(e) => { setIsPlaying(false); setCurrentIndex(Number(e.target.value)); }}
-              className="w-full accent-blue-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
-            />
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <FastForward size={14} className="text-slate-400 ml-1" />
-            {[1, 2, 4].map((speed) => (
-              <button
-                key={speed}
-                onClick={() => setSpeedMultiplier(speed)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  speedMultiplier === speed ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {speed}X
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

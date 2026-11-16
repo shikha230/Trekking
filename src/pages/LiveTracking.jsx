@@ -715,192 +715,112 @@
 // };
 
 // export default LiveTracking;
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, Circle, Tooltip, useMap } from 'react-leaflet';
+// 
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
 import axios from 'axios';
-import { Radio, Activity, Layers, MapPin, Gauge, Weight, Power, Truck as TruckIcon, Sparkles, RefreshCw, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Radio, Activity, Truck as TruckIcon, Sparkles, X, ChevronLeft, ChevronRight, Search, History } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 const socket = io(API_BASE_URL);
 
-// 🎨 Get Status & Color Mapping
+// 🎨 Status & Color Mapping
 const getTruckStatus = (truck) => {
   const speed = Number(truck.speed || 0);
-  const isEngineOn = truck.ignition || speed > 0.5;
   const state = (truck.current_state || '').toUpperCase();
-  const loadVal = Number(truck.io9 || truck.load || 0);
-  const isLoaded = loadVal >= 1000;
 
   if (state.includes('UNLOAD') || state.includes('PLANT')) {
-    return { 
-      label: 'UNLOADING', 
-      color: '#A855F7', 
-      bg: 'bg-purple-600', 
-      ringColor: '#D8B4FE',
-      isUnloading: true,
-      isLoaded: false
-    };
+    return { label: 'UNLOADING', color: '#22C55E', bg: 'bg-green-600', ringColor: '#86EFAC', isUnloading: true };
   }
-
-  if (!isLoaded) {
-    return { 
-      label: 'UNLOADED', 
-      color: '#06B6D4', 
-      bg: 'bg-cyan-600', 
-      ringColor: '#67E8F9',
-      isUnloading: false,
-      isLoaded: false
-    };
-  }
-
   if (state.includes('LOAD') || state.includes('MINE')) {
-    return { 
-      label: 'LOADING', 
-      color: '#3B82F6', 
-      bg: 'bg-blue-600', 
-      ringColor: '#93C5FD',
-      isUnloading: false,
-      isLoaded: true
-    };
+    return { label: 'LOADING', color: '#EAB308', bg: 'bg-yellow-500', ringColor: '#FEF08A', isUnloading: false };
   }
   if (speed > 2) {
-    return { 
-      label: 'MOVING', 
-      color: '#10B981', 
-      bg: 'bg-emerald-500', 
-      ringColor: '#6EE7B7',
-      isUnloading: false,
-      isLoaded: true
-    };
-  } else if (isEngineOn) {
-    return { 
-      label: 'IDLE', 
-      color: '#F59E0B', 
-      bg: 'bg-amber-500', 
-      ringColor: '#FCD34D',
-      isUnloading: false,
-      isLoaded: true
-    };
+    return { label: 'MOVING', color: '#3B82F6', bg: 'bg-blue-600', ringColor: '#93C5FD', isUnloading: false };
   } else {
-    return { 
-      label: 'PARKED', 
-      color: '#EF4444', 
-      bg: 'bg-rose-500', 
-      ringColor: '#FCA5A5',
-      isUnloading: false,
-      isLoaded: true
-    };
+    return { label: 'IDLE / STOPPED', color: '#EF4444', bg: 'bg-red-600', ringColor: '#FCA5A5', isUnloading: false };
   }
 };
 
-// 🚛 Custom Dynamic Truck Icon Marker
+// 🚛 Clean & Minimal Truck Marker
 const createTruckIcon = (truck) => {
   const status = getTruckStatus(truck);
   const name = truck.name || `Truck #${truck.traccar_id}`;
-  const isUnloading = status.isUnloading;
 
   return L.divIcon({
     className: 'custom-truck-marker',
     html: `
-      <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
         <div style="
-          background: ${isUnloading ? 'linear-gradient(135deg, #6b21a8 0%, #3b0764 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'};
+          background: #0f172a;
           color: #ffffff;
-          font-weight: 900;
-          font-size: 10px;
-          padding: 4px 10px;
-          border-radius: 8px;
-          border: 2px solid ${isUnloading ? '#c084fc' : status.color};
-          box-shadow: 0 8px 25px ${isUnloading ? 'rgba(168, 85, 247, 0.6)' : 'rgba(0,0,0,0.5)'};
+          font-weight: 800;
+          font-size: 9px;
+          padding: 2px 8px;
+          border-radius: 6px;
+          border: 1.5px solid ${status.color};
+          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
           white-space: nowrap;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           font-family: sans-serif;
-          letter-spacing: 0.8px;
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 4px;
         ">
-          <span style="
-            width: 8px; 
-            height: 8px; 
-            background-color: ${status.color}; 
-            border-radius: 50%; 
-            display: inline-block;
-            box-shadow: 0 0 8px ${status.color};
-          "></span>
-          ${name} (${status.label})
+          <span style="width: 6px; height: 6px; background-color: ${status.color}; border-radius: 50%; display: inline-block;"></span>
+          ${name}
         </div>
-
-        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
-          <div style="
-            position: absolute;
-            width: 46px;
-            height: 46px;
-            background-color: ${status.ringColor};
-            border-radius: 50%;
-            opacity: 0.6;
-            animation: pulse-ring 1.6s infinite ease-out;
-          "></div>
-          <div style="
-            background: linear-gradient(135deg, ${status.color} 0%, #090d16 150%);
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            border: 2.5px solid #ffffff;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-          ">
-            <div style="
-              width: 12px; 
-              height: 12px; 
-              background-color: #ffffff; 
-              border-radius: 50%; 
-              box-shadow: 0 0 10px rgba(255,255,255,1);
-            "></div>
-          </div>
+        <div style="
+          background: ${status.color};
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          border: 2px solid #ffffff;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <div style="width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%;"></div>
         </div>
       </div>
-      <style>
-        @keyframes pulse-ring {
-          0% { transform: scale(0.8); opacity: 0.9; }
-          70% { transform: scale(1.8); opacity: 0; }
-          100% { transform: scale(1.8); opacity: 0; }
-        }
-      </style>
     `,
-    iconSize: [120, 80],
-    iconAnchor: [60, 65],
+    iconSize: [100, 60],
+    iconAnchor: [50, 45],
   });
 };
 
-const MapRecenter = ({ vehicles }) => {
+const MapController = ({ selectedTruck, vehicles }) => {
   const map = useMap();
-  
-  useEffect(() => {
-    const validCoords = vehicles
-      .filter(v => v.latitude && v.longitude)
-      .map(v => [Number(v.latitude), Number(v.longitude)]);
 
-    if (validCoords.length > 0) {
-      const bounds = L.latLngBounds(validCoords);
-      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 15 });
+  useEffect(() => {
+    if (selectedTruck && selectedTruck.latitude && selectedTruck.longitude) {
+      map.setView([Number(selectedTruck.latitude), Number(selectedTruck.longitude)], 16, { animate: true });
+    } else if (vehicles.length > 0 && !selectedTruck) {
+      const validCoords = vehicles.filter(v => v.latitude && v.longitude).map(v => [Number(v.latitude), Number(v.longitude)]);
+      if (validCoords.length > 0) {
+        map.fitBounds(L.latLngBounds(validCoords), { padding: [50, 50], maxZoom: 14 });
+      }
     }
-  }, [vehicles.length, map]);
+  }, [selectedTruck, map]);
 
   return null;
 };
 
 const LiveTracking = () => {
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
   const [geofences, setGeofences] = useState([]);
   const [mapType, setMapType] = useState('satellite');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTruck, setSelectedTruck] = useState(null);
+  const markerRefs = useRef({});
 
   const fetchLiveVehicles = async () => {
     try {
@@ -943,335 +863,230 @@ const LiveTracking = () => {
     return loadVal < 1000 || state.includes('UNLOAD') || state.includes('PLANT');
   });
 
+  const filteredVehicles = vehicles.filter(v => 
+    (v.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(v.traccar_id).includes(searchQuery)
+  );
+
   const defaultCenter = [22.348, 82.656];
 
+  const handleTruckSelect = (truck) => {
+    setSelectedTruck(truck);
+    if (truck.traccar_id && markerRefs.current[truck.traccar_id]) {
+      markerRefs.current[truck.traccar_id].openPopup();
+    }
+  };
+
+  // 🚀 Redirect to /history-playback with Device ID
+  const handleRedirectToReplay = (e, truck) => {
+    e.stopPropagation();
+    const deviceId = truck.traccar_id || truck.id;
+    navigate(`/history-playback?deviceId=${deviceId}`);
+  };
+
   return (
-    <div className="relative w-full h-screen bg-slate-950 overflow-hidden font-sans select-none">
+    <div className="relative w-full h-screen bg-slate-950 overflow-hidden font-sans select-none flex">
       
-      {/* Top Floating Glass Command Bar */}
-      <div className="absolute top-6 left-6 z-[1000] flex items-center gap-3.5 bg-slate-900/85 backdrop-blur-2xl px-5 py-3.5 rounded-2xl border border-slate-700/60 shadow-2xl">
-        <div className="p-2.5 bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/30">
-          <Activity size={20} />
-        </div>
-        <div>
-          <h2 className="text-xs font-black uppercase tracking-wider text-white">Fleet Control Command Center</h2>
-          <p className="text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 mt-0.5">
-            <Radio size={12} className="animate-pulse text-emerald-400" /> REALTIME TELEMETRY ACTIVE ({vehicles.length} TRUCKS)
-          </p>
-        </div>
-      </div>
-
-      {/* Unloaded Trucks Button in Bottom-Right Corner */}
-      <div className="absolute bottom-6 right-6 z-[1000]">
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="flex items-center gap-2.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white px-5 py-3 rounded-2xl shadow-2xl border border-cyan-400/40 font-black text-xs transition-all cursor-pointer active:scale-95"
-        >
-          <TruckIcon size={18} className="text-white animate-bounce" />
-          <span>Unloaded / Unloading Trucks</span>
-          <span className="bg-white text-slate-900 px-2.5 py-0.5 rounded-full text-[10px] font-black shadow">
-            {unloadedTrucks.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Slide-out Unloaded Trucks Panel */}
-      {isDrawerOpen && (
-        <div className="absolute top-0 left-0 w-80 h-full bg-slate-900/95 backdrop-blur-2xl z-[2000] border-r border-slate-800 shadow-2xl flex flex-col p-5 font-sans animate-in slide-in-from-left duration-300">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-cyan-500/20 rounded-xl border border-cyan-500/40 text-cyan-400">
-                <TruckIcon size={18} />
-              </div>
-              <div>
-                <h3 className="text-xs font-black uppercase text-white tracking-wider">Unloaded Fleet</h3>
-                <p className="text-[10px] text-slate-400">Active Unloaded / Tipping Units</p>
-              </div>
+      {/* Left Sidebar - Devices List */}
+      <div className={`relative z-[1500] bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
+        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-600/20 rounded-lg text-blue-400">
+              <TruckIcon size={16} />
             </div>
-            <button 
-              onClick={() => setIsDrawerOpen(false)}
-              className="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer"
-            >
-              <X size={16} />
-            </button>
+            <div>
+              <h3 className="text-xs font-black uppercase text-white">Devices List</h3>
+              <p className="text-[10px] text-slate-400">{vehicles.length} Units Connected</p>
+            </div>
           </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-lg cursor-pointer">
+            <ChevronLeft size={14} />
+          </button>
+        </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {unloadedTrucks.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-xs font-medium">
-                No unloaded trucks currently active.
-              </div>
-            ) : (
-              unloadedTrucks.map((truck) => {
-                const status = getTruckStatus(truck);
-                const loadVal = Number(truck.io9 || truck.load || 0);
-                const displayImei = truck.imei || truck.uniqueid || truck.device_imei || 'N/A'; //
-
-                return (
-                  <div 
-                    key={truck.traccar_id}
-                    className="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 p-3.5 rounded-2xl shadow-lg transition-all space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-white flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }}></span>
-                        {truck.name || `Truck #${truck.traccar_id}`}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black text-white uppercase ${status.bg}`}>
-                        {status.label}
-                      </span>
-                    </div>
-
-                    <div className="text-[11px] text-slate-300 space-y-1 font-mono bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">IMEI:</span>
-                        <span className="text-white font-bold">{displayImei}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Payload (IO9):</span>
-                        <span className="text-cyan-400 font-bold">{loadVal} (Unloaded)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Speed:</span>
-                        <span className="text-emerald-400 font-bold">{Number(truck.speed || 0).toFixed(1)} km/h</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+        {/* Search */}
+        <div className="p-2.5 border-b border-slate-800/60">
+          <div className="relative flex items-center">
+            <Search size={13} className="absolute left-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search Device..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-800/80 border border-slate-700/60 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500"
+            />
           </div>
         </div>
-      )}
 
-      {/* Map Switcher Control */}
-      <div className="absolute top-6 right-6 z-[1000] bg-slate-900/85 backdrop-blur-2xl p-1.5 rounded-2xl border border-slate-700/60 shadow-2xl flex gap-1.5">
-        <button
-          onClick={() => setMapType('satellite')}
-          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-            mapType === 'satellite' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          Satellite
-        </button>
-        <button
-          onClick={() => setMapType('street')}
-          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-            mapType === 'street' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          Street
-        </button>
-      </div>
+        {/* List items */}
+        <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
+          {filteredVehicles.map((truck) => {
+            const status = getTruckStatus(truck);
+            const isSelected = selectedTruck?.traccar_id === truck.traccar_id;
 
-      {/* Map Renderer */}
-      <MapContainer center={defaultCenter} zoom={13} zoomControl={false} className="w-full h-full z-0">
-        {mapType === 'satellite' ? (
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            attribution="&copy; Esri"
-          />
-        ) : (
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap"
-          />
-        )}
-
-        <MapRecenter vehicles={vehicles} />
-
-        {/* Geofence Overlay Rendering */}
-        {geofences.map((gf) => {
-          const type = (gf.type || gf.category || '').toLowerCase();
-          const name = (gf.name || 'Zone').toUpperCase();
-
-          const isUnloading = type === 'unloading';
-          const strokeColor = isUnloading ? '#A855F7' : '#3B82F6';
-          const fillColor = isUnloading ? '#C084FC' : '#60A5FA';
-
-          if (gf.coordinates && Array.isArray(gf.coordinates) && gf.coordinates.length > 0) {
             return (
-              <Polygon
-                key={gf.id || gf.name}
-                positions={gf.coordinates}
-                pathOptions={{
-                  color: strokeColor,
-                  fillColor: fillColor,
-                  fillOpacity: 0.28,
-                  weight: 3,
-                  dashArray: '8, 8'
-                }}
+              <div
+                key={truck.traccar_id}
+                onClick={() => handleTruckSelect(truck)}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                  isSelected ? 'bg-blue-600/20 border-blue-500/60' : 'bg-slate-800/40 hover:bg-slate-800 border-slate-700/40'
+                }`}
               >
-                <Tooltip permanent direction="center" opacity={0.95}>
-                  <span className="font-black text-[10px] tracking-wider text-slate-900 px-2.5 py-1 bg-white/95 rounded-xl border shadow-lg">
-                    {name}
-                  </span>
-                </Tooltip>
-              </Polygon>
-            );
-          }
-
-          if (gf.latitude && gf.longitude && gf.radius) {
-            return (
-              <Circle
-                key={gf.id || gf.name}
-                center={[Number(gf.latitude), Number(gf.longitude)]}
-                radius={Number(gf.radius)}
-                pathOptions={{
-                  color: strokeColor,
-                  fillColor: fillColor,
-                  fillOpacity: 0.28,
-                  weight: 3,
-                  dashArray: '8, 8'
-                }}
-              >
-                <Tooltip permanent direction="center" opacity={0.95}>
-                  <span className="font-black text-[10px] tracking-wider text-slate-900 px-2.5 py-1 bg-white/95 rounded-lg border shadow-lg">
-                    {name}
-                  </span>
-                </Tooltip>
-              </Circle>
-            );
-          }
-          return null;
-        })}
-
-        {/* Truck Marker Rendering */}
-        {vehicles.map((truck) => {
-          if (!truck.latitude || !truck.longitude) return null;
-          const status = getTruckStatus(truck);
-          
-          const loadVal = Number(truck.io9 || truck.load || 0);
-          const isLoaded = loadVal >= 1000;
-
-          return (
-            <Marker
-              key={truck.traccar_id}
-              position={[Number(truck.latitude), Number(truck.longitude)]}
-              icon={createTruckIcon(truck)}
-            >
-              <Popup className="custom-popup">
-                <div className="p-3.5 min-w-[250px] font-sans bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-800">
-                  
-                  {/* Popup Header */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-2.5">
-                    <span className="font-black text-sm text-white flex items-center gap-2">
-                      <TruckIcon size={16} className={status.isUnloading ? 'text-purple-400 animate-bounce' : 'text-blue-400'} /> 
-                      {truck.name}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black text-white uppercase tracking-wider ${status.bg} shadow-md`}>
-                      {status.label}
-                    </span>
-                  </div>
-
-                  {status.isUnloading && (
-                    <div className="mb-2.5 bg-gradient-to-r from-purple-900/80 to-indigo-900/80 p-2.5 rounded-xl border border-purple-500/50 flex items-center justify-between animate-pulse">
-                      <span className="text-[10px] font-black text-purple-200 tracking-wider flex items-center gap-1.5 uppercase">
-                        <RefreshCw size={13} className="animate-spin text-purple-300" /> Tipping / Unloading Active
-                      </span>
-                      <span className="text-[10px] font-extrabold text-white bg-purple-600 px-2 py-0.5 rounded-md">PLANT</span>
-                    </div>
-                  )}
-
-                  {truck.address && (
-                    <div className="flex items-start gap-2 text-xs text-slate-300 mb-3 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/50">
-                      <MapPin size={14} className="text-rose-400 shrink-0 mt-0.5" />
-                      <span className="font-medium leading-tight">{truck.address}</span>
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-xs text-slate-300">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-medium flex items-center gap-1.5"><Gauge size={13}/> Speed:</span>
-                      <span className="font-mono font-bold text-white">{Number(truck.speed || 0).toFixed(1)} km/h</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-medium flex items-center gap-1.5"><Weight size={13}/> Payload (IO9):</span>
-                      <span className={`font-black px-2.5 py-0.5 rounded-lg text-[10px] ${isLoaded ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'}`}>
-                        {loadVal} ({isLoaded ? 'LOADED' : 'UNLOADED'})
-                      </span>
-                    </div>
-
-                    <div className="border-t border-slate-800 pt-2 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-medium flex items-center gap-1.5"><Power size={13}/> Ignition:</span>
-                        <span className={`font-black px-2 py-0.5 rounded text-[10px] ${truck.ignition ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                          {truck.ignition ? 'ON' : 'OFF'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-medium">Body Tipping:</span>
-                        <span className={`font-black px-2 py-0.5 rounded text-[10px] ${truck.bodyStatus === 'Up' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-300'}`}>
-                          {truck.bodyStatus || 'Down'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {(truck.distToLoading || truck.distToUnloading) && (
-                      <div className="border-t border-slate-800 pt-2 space-y-1 font-semibold text-[11px]">
-                        {truck.distToLoading && (
-                          <div className="flex justify-between items-center text-blue-400">
-                            <span>To Mine (Loading):</span>
-                            <span>{truck.distToLoading}</span>
-                          </div>
-                        )}
-                        {truck.distToUnloading && (
-                          <div className="flex justify-between items-center text-purple-400">
-                            <span>To Plant (Unloading):</span>
-                            <span>{truck.distToUnloading}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: status.color }}></span>
+                  <div>
+                    <h4 className="text-xs font-black text-white">{truck.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono">Speed: {Number(truck.speed || 0).toFixed(1)}</p>
                   </div>
                 </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+                
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white ${status.bg}`}>
+                    {status.label}
+                  </span>
+                  
+                  {/* Direct Replay Button */}
+                  <button
+                    onClick={(e) => handleRedirectToReplay(e, truck)}
+                    title="Replay History"
+                    className="p-1.5 bg-slate-700 hover:bg-blue-600 text-slate-200 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    <History size={12} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-      {/* Floating Status Guide Panel */}
-      <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-2xl p-5 rounded-3xl border border-slate-800 shadow-2xl text-xs space-y-3 font-medium min-w-[270px]">
-        <p className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
-          <Sparkles size={12} className="text-blue-400" /> Live Fleet & Zone Legend
-        </p>
+      {/* Toggle button when closed */}
+      {!isSidebarOpen && (
+        <button onClick={() => setIsSidebarOpen(true)} className="absolute top-4 left-4 z-[1600] bg-slate-900/90 p-2.5 rounded-xl border border-slate-700 text-white shadow-lg cursor-pointer">
+          <ChevronRight size={16} />
+        </button>
+      )}
 
-        <div className="flex items-center gap-3">
-          <span className="w-4 h-4 rounded-xl bg-purple-600 shadow-md shadow-purple-600/30 shrink-0"></span>
-          <span className="text-slate-200 font-bold whitespace-nowrap">Unloading / Plant (Active)</span>
+      {/* Map Area */}
+      <div className="flex-1 relative h-full">
+        
+        {/* Top Floating Header */}
+        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-3 bg-slate-900/85 backdrop-blur-xl px-4 py-2.5 rounded-xl border border-slate-700/60 shadow-xl">
+          <div className="p-2 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg text-white">
+            <Activity size={16} />
+          </div>
+          <div>
+            <h2 className="text-xs font-black uppercase text-white">Fleet Command Center</h2>
+            <p className="text-[9px] font-bold text-emerald-400 flex items-center gap-1">
+              <Radio size={10} className="animate-pulse" /> LIVE TELEMETRY ACTIVE
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="w-4 h-4 rounded-xl bg-cyan-600 shadow-md shadow-cyan-600/30 shrink-0"></span>
-          <span className="text-slate-200 font-bold whitespace-nowrap">Unloaded (Payload &lt; 1000)</span>
+        {/* Map Switcher */}
+        <div className="absolute top-4 right-4 z-[1000] bg-slate-900/85 backdrop-blur-xl p-1 rounded-xl border border-slate-700/60 shadow-xl flex gap-1">
+          <button onClick={() => setMapType('satellite')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black cursor-pointer ${mapType === 'satellite' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Satellite</button>
+          <button onClick={() => setMapType('street')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black cursor-pointer ${mapType === 'street' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Street</button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="w-4 h-4 rounded-xl bg-blue-600 shadow-md shadow-blue-600/30 shrink-0"></span>
-          <span className="text-slate-200 font-bold whitespace-nowrap">Loading / Loaded Zone</span>
+        {/* Unloaded Floating Button */}
+        <div className="absolute bottom-4 right-4 z-[1000]">
+          <button onClick={() => setIsDrawerOpen(true)} className="flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white px-4 py-2.5 rounded-xl shadow-xl border border-cyan-400/40 font-black text-xs cursor-pointer">
+            <TruckIcon size={16} />
+            <span>Unloaded / Unloading</span>
+            <span className="bg-white text-slate-900 px-2 py-0.5 rounded-full text-[9px] font-black">{unloadedTrucks.length}</span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
-          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-md shadow-emerald-500/40 shrink-0"></span>
-          <span className="text-slate-200 font-bold">Moving (&gt; 2 km/h)</span>
+        {/* Unloaded Drawer */}
+        {isDrawerOpen && (
+          <div className="absolute top-0 right-0 w-72 h-full bg-slate-900/95 backdrop-blur-xl z-[2000] border-l border-slate-800 shadow-2xl flex flex-col p-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+              <h3 className="text-xs font-black uppercase text-white">Unloaded Fleet ({unloadedTrucks.length})</h3>
+              <button onClick={() => setIsDrawerOpen(false)} className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-lg cursor-pointer"><X size={14} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {unloadedTrucks.map((truck) => (
+                <div key={truck.traccar_id} onClick={() => handleTruckSelect(truck)} className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50 cursor-pointer">
+                  <div className="flex justify-between text-xs font-black text-white">
+                    <span>{truck.name}</span>
+                    <span className="text-cyan-400 font-mono">IO9: {truck.io9 || 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Map */}
+        <MapContainer center={defaultCenter} zoom={13} zoomControl={false} className="w-full h-full z-0">
+          <TileLayer url={mapType === 'satellite' ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"} />
+          <MapController selectedTruck={selectedTruck} vehicles={vehicles} />
+
+          {/* Clean Geofences */}
+          {geofences.map((gf) => {
+            const isUnloading = (gf.type || gf.category || '').toLowerCase() === 'unloading';
+            const color = isUnloading ? '#22C55E' : '#EAB308';
+            if (gf.coordinates && Array.isArray(gf.coordinates)) {
+              return <Polygon key={gf.id || gf.name} positions={gf.coordinates} pathOptions={{ color, fillColor: color, fillOpacity: 0.15, weight: 2, dashArray: '5, 5' }} />;
+            }
+            if (gf.latitude && gf.longitude && gf.radius) {
+              return <Circle key={gf.id || gf.name} center={[Number(gf.latitude), Number(gf.longitude)]} radius={Number(gf.radius)} pathOptions={{ color, fillColor: color, fillOpacity: 0.15, weight: 2, dashArray: '5, 5' }} />;
+            }
+            return null;
+          })}
+
+          {/* Markers */}
+          {vehicles.map((truck) => {
+            if (!truck.latitude || !truck.longitude) return null;
+            return (
+              <Marker
+                key={truck.traccar_id}
+                position={[Number(truck.latitude), Number(truck.longitude)]}
+                icon={createTruckIcon(truck)}
+                ref={(el) => { if (el) markerRefs.current[truck.traccar_id] = el; }}
+                eventHandlers={{ click: () => setSelectedTruck(truck) }}
+              >
+                <Popup className="custom-popup">
+                  <div className="p-3 min-w-[220px] bg-slate-950 text-white rounded-2xl shadow-xl border border-slate-800 space-y-2.5">
+                    <div className="text-center pb-2 border-b border-slate-800">
+                      <h3 className="font-black text-xs text-white">{truck.name}</h3>
+                    </div>
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between"><span className="text-slate-400">Ignition:</span> <span className={truck.ignition ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{truck.ignition ? 'ON' : 'OFF'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Load Status (IO6):</span> <span className="font-mono font-bold text-cyan-400">{truck.io6 || 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Dala Pos (IO9):</span> <span className="font-mono font-bold text-blue-400">{truck.io9 || 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Speed:</span> <span className="font-mono font-bold text-emerald-400">{Number(truck.speed || 0).toFixed(1)} km/h</span></div>
+                    </div>
+
+                    {/* Replay Redirect Button */}
+                    <div className="pt-2 border-t border-slate-800">
+                      <button
+                        onClick={(e) => handleRedirectToReplay(e, truck)}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-[11px] py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md"
+                      >
+                        <History size={14} />
+                        Replay History
+                      </button>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+
+        {/* Legend */}
+        <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/90 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-800 shadow-xl text-[11px] space-y-2">
+          <p className="font-black uppercase tracking-wider text-[9px] text-slate-400 border-b border-slate-800 pb-1.5 flex items-center gap-1">
+            <Sparkles size={10} className="text-blue-400" /> Status Legend
+          </p>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#EAB308]"></span><span className="text-slate-200 font-bold">Loading</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#22C55E]"></span><span className="text-slate-200 font-bold">Unloading</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]"></span><span className="text-slate-200 font-bold">Moving</span></div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span><span className="text-slate-200 font-bold">Idle / Stopped</span></div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-md shadow-amber-500/40 shrink-0"></span>
-          <span className="text-slate-200 font-bold">Idle (Engine ON)</span>
-        </div>
- 
-        <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-md shadow-rose-500/40 shrink-0"></span>
-          <span className="text-slate-200 font-bold">Parked / Stopped</span>
-        </div>
-
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-800 text-blue-400 font-black text-[11px]">
-          <Layers size={13} />
-          <span>Real-time Telemetry Synced</span>
-        </div>
       </div>
     </div>
   );

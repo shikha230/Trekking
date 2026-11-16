@@ -18,6 +18,7 @@ import CreateUser from './pages/CreateUser';
 import UsersManagement from './pages/UsersManagement';
 import ReportExport from './pages/ReportExport';
 import HistoricalPlayback from './pages/HistoricalPlayback';
+import GeofenceHistoryModal from './pages/GeofenceHistoryModal';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const savedUser = localStorage.getItem('user') || localStorage.getItem('adminUser');
@@ -111,6 +112,7 @@ function AppContent() {
             <Route path="/create-user" element={<ProtectedRoute adminOnly={true}><CreateUser /></ProtectedRoute>} />
             <Route path="/report-export" element={<ProtectedRoute adminOnly={true}><ReportExport /></ProtectedRoute>} />
             <Route path="/history-playback" element={<ProtectedRoute adminOnly={true}><HistoricalPlayback /></ProtectedRoute>} />
+            <Route path="/geofences-history" element={<ProtectedRoute adminOnly={true}><GeofenceHistoryModal /></ProtectedRoute>} />
             
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
