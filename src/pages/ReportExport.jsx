@@ -82,10 +82,8 @@ const ReportExport = () => {
     selectedIds.includes(String(d.traccar_id))
   );
 
-  const safeName = (s) => String(s || 'Vehicle').replace(/[\\/:*?"<>|]/g, '_');
-
-  // 2. Download Separate Excel (.xlsx) File Per Selected Device (Including "All")
-  const handleDownloadSeparateExcels = async (e) => {
+  // 2. Download Single Consolidated Excel (.xlsx) File with All Selected Devices in One Sheet
+const handleDownloadConsolidatedExcel = async (e) => {
     e.preventDefault();
 
     if (selectedIds.length === 0) {
@@ -96,17 +94,19 @@ const ReportExport = () => {
     setLoading(true);
     setNotification({ type: '', message: '' });
 
-    let exportedCount = 0;
+    const allConsolidatedRows = [];
     const emptyDevices = [];
+    const failedDevices = [];
+    let trucksWithDataCount = 0;
 
     try {
-      const formattedStart = startDate.length === 16 ? `${startDate}:00` : startDate;
-      const formattedEnd = endDate.length === 16 ? `${endDate}:00` : endDate;
+      const formattedStart = startDate && startDate.length === 16 ? `${startDate}:00` : startDate;
+      const formattedEnd = endDate && endDate.length === 16 ? `${endDate}:00` : endDate;
       const dateTag = startDate ? startDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
       for (let i = 0; i < selectedDevicesList.length; i++) {
         const dev = selectedDevicesList[i];
-        setProgressText(`Exporting ${i + 1} of ${selectedDevicesList.length}: ${dev.name}...`);
+        setProgressText(`Fetching ${i + 1} of ${selectedDevicesList.length}: ${dev.name}...`);
 
         try {
           const params = new URLSearchParams();
@@ -119,47 +119,97 @@ const ReportExport = () => {
             { responseType: 'text' }
           );
 
-          const csvText = response.data;
-          if (!csvText || !csvText.trim()) {
+          const csvText = typeof response.data === 'string' ? response.data : '';
+          if (!csvText.trim()) {
             emptyDevices.push(dev.name);
             continue;
           }
 
           const parsedWb = XLSX.read(csvText, { type: 'string' });
-          const firstSheet = parsedWb.Sheets[parsedWb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
-
-          if (!rows.length) {
+          const firstSheetName = parsedWb.SheetNames[0];
+          if (!firstSheetName) {
             emptyDevices.push(dev.name);
             continue;
           }
 
-          const newWb = XLSX.utils.book_new();
-          const newWs = XLSX.utils.json_to_sheet(rows);
-          XLSX.utils.book_append_sheet(newWb, newWs, 'RawData');
+          const firstSheet = parsedWb.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-          const fileName = `${safeName(dev.name)}_${dateTag}.xlsx`;
-          XLSX.writeFile(newWb, fileName);
-          exportedCount += 1;
+          if (!Array.isArray(rows) || rows.length === 0) {
+            emptyDevices.push(dev.name);
+            continue;
+          }
 
-          // Delay so browser allows multiple files to download cleanly
-          await new Promise((resolve) => setTimeout(resolve, 400));
+          trucksWithDataCount += 1;
+
+          rows.forEach((row) => {
+            const { ['Truck Name']: _oldName, IMEI: _oldImei, ...restFields } = row;
+            allConsolidatedRows.push({
+              'Sr. No.': allConsolidatedRows.length + 1,
+              'Truck Name': dev.name || 'N/A',
+              'IMEI': dev.imei || 'N/A',
+              ...restFields
+            });
+          });
         } catch (devErr) {
           console.error(`Failed for ${dev.name}:`, devErr);
-          emptyDevices.push(dev.name);
+          failedDevices.push(dev.name);
         }
       }
 
-      if (exportedCount > 0) {
+      if (allConsolidatedRows.length > 0) {
+        setProgressText('Building systematic Excel sheet...');
+
+        const newWb = XLSX.utils.book_new();
+        const newWs = XLSX.utils.json_to_sheet(allConsolidatedRows);
+
+        const headers = Object.keys(allConsolidatedRows[0]);
+        newWs['!cols'] = headers.map((header) => {
+          const maxLen = Math.max(
+            header.length,
+            ...allConsolidatedRows.slice(0, 200).map((r) => String(r[header] ?? '').length)
+          );
+          return { wch: Math.min(Math.max(maxLen + 3, 12), 35) };
+        });
+
+        XLSX.utils.book_append_sheet(newWb, newWs, 'Consolidated_Report');
+
+        // Reliable Blob download instead of XLSX.writeFile alone
+        const wbArray = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbArray], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const fileLabel = isAllSelected
+          ? `All_Fleet_Consolidated_${dateTag}.xlsx`
+          : `Fleet_Report_${trucksWithDataCount}_Trucks_${dateTag}.xlsx`;
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.setAttribute('download', fileLabel);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
         const skippedMsg = emptyDevices.length
-          ? ` (No data found for: ${emptyDevices.join(', ')})`
+          ? ` | Empty: ${emptyDevices.join(', ')}`
           : '';
+        const errMsg = failedDevices.length
+          ? ` | API Error: ${failedDevices.join(', ')}`
+          : '';
+
         showNotification(
           'success',
-          `${exportedCount} separate Excel file(s) downloaded successfully!${skippedMsg}`
+          `Downloaded ${fileLabel} (${allConsolidatedRows.length} rows across ${trucksWithDataCount} truck(s))${skippedMsg}${errMsg}`
         );
       } else {
-        showNotification('error', 'No telemetry data found for any of the selected trucks in this time range.');
+        const detail =
+          failedDevices.length > 0
+            ? `API error on ${failedDevices.join(', ')}. Check backend console/Network tab.`
+            : 'No rows returned for selected date/time range. Try widening Start/End Date & Time.';
+        showNotification('error', detail);
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -182,7 +232,7 @@ const ReportExport = () => {
           <div>
             <h1 className="text-xl font-black text-slate-900">Custom Fleet Report Export</h1>
             <p className="text-xs text-slate-500 font-medium">
-              Select "All" or multiple trucks to download a separate Excel (.xlsx) file for each device
+              Select "All" or multiple trucks to download all data systematically in a single Excel sheet
             </p>
           </div>
         </div>
@@ -206,7 +256,7 @@ const ReportExport = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleDownloadSeparateExcels} className="space-y-4">
+        <form onSubmit={handleDownloadConsolidatedExcel} className="space-y-4">
 
           {/* Multi-Select Device Dropdown with "All" Option */}
           <div ref={dropdownRef} className="relative">
@@ -305,7 +355,7 @@ const ReportExport = () => {
                       <div>
                         <p className="font-bold">All Trucks / Fleet</p>
                         <p className="text-[10px] text-slate-500">
-                          Download separate Excel file for all {devices.length} devices
+                          Combine all {devices.length} devices into one systematic Excel sheet
                         </p>
                       </div>
                     </div>
@@ -393,11 +443,11 @@ const ReportExport = () => {
           >
             {loading ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> {progressText || 'Generating Excel Files...'}
+                <Loader2 size={16} className="animate-spin" /> {progressText || 'Generating Consolidated Excel...'}
               </>
             ) : (
               <>
-                <FileDown size={16} /> Download Separate Excel Files ({selectedIds.length})
+                <FileDown size={16} /> Download Consolidated Excel ({selectedIds.length} Trucks)
               </>
             )}
           </button>
