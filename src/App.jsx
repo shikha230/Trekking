@@ -19,6 +19,7 @@ import UsersManagement from './pages/UsersManagement';
 import ReportExport from './pages/ReportExport';
 import HistoricalPlayback from './pages/HistoricalPlayback';
 import GeofenceHistoryModal from './pages/GeofenceHistoryModal';
+import GeneralTripProcessor from './pages/GeneralTripProcessor';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const savedUser = localStorage.getItem('user') || localStorage.getItem('adminUser');
@@ -113,7 +114,7 @@ function AppContent() {
             <Route path="/report-export" element={<ProtectedRoute adminOnly={true}><ReportExport /></ProtectedRoute>} />
             <Route path="/history-playback" element={<ProtectedRoute adminOnly={true}><HistoricalPlayback /></ProtectedRoute>} />
             <Route path="/geofences-history" element={<ProtectedRoute adminOnly={true}><GeofenceHistoryModal /></ProtectedRoute>} />
-            
+            <Route path="/trip-processor" element={<GeneralTripProcessor />} />
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
