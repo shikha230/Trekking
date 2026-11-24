@@ -6,6 +6,8 @@ import {
   Loader2, Search, X, CheckSquare, Square, FileSpreadsheet, Layers
 } from 'lucide-react';
 
+const CONCURRENCY_LIMIT = 4; // 4 parallel requests at a time (fast without overloading 2-vCPU DB)
+
 const ReportExport = () => {
   const [devices, setDevices] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -82,8 +84,8 @@ const ReportExport = () => {
     selectedIds.includes(String(d.traccar_id))
   );
 
-  // 2. Download Single Consolidated Excel (.xlsx) File with All Selected Devices in One Sheet
-const handleDownloadConsolidatedExcel = async (e) => {
+  // 2. Download Single Consolidated Excel (.xlsx) File using Concurrent Worker Pool
+  const handleDownloadConsolidatedExcel = async (e) => {
     e.preventDefault();
 
     if (selectedIds.length === 0) {
@@ -94,66 +96,92 @@ const handleDownloadConsolidatedExcel = async (e) => {
     setLoading(true);
     setNotification({ type: '', message: '' });
 
-    const allConsolidatedRows = [];
+    const resultsByIndex = new Array(selectedDevicesList.length).fill(null);
     const emptyDevices = [];
     const failedDevices = [];
-    let trucksWithDataCount = 0;
 
     try {
       const formattedStart = startDate && startDate.length === 16 ? `${startDate}:00` : startDate;
       const formattedEnd = endDate && endDate.length === 16 ? `${endDate}:00` : endDate;
       const dateTag = startDate ? startDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
-      for (let i = 0; i < selectedDevicesList.length; i++) {
-        const dev = selectedDevicesList[i];
-        setProgressText(`Fetching ${i + 1} of ${selectedDevicesList.length}: ${dev.name}...`);
+      let nextIndex = 0;
+      let completedCount = 0;
 
-        try {
-          const params = new URLSearchParams();
-          params.append('deviceId', dev.traccar_id);
-          if (formattedStart) params.append('startDate', formattedStart);
-          if (formattedEnd) params.append('endDate', formattedEnd);
+      const worker = async () => {
+        while (nextIndex < selectedDevicesList.length) {
+          const currentIdx = nextIndex++;
+          const dev = selectedDevicesList[currentIdx];
 
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/download_custom_csv?${params.toString()}`,
-            { responseType: 'text' }
+          setProgressText(
+            `Fetching (${completedCount + 1}/${selectedDevicesList.length}): ${dev.name}...`
           );
 
-          const csvText = typeof response.data === 'string' ? response.data : '';
-          if (!csvText.trim()) {
-            emptyDevices.push(dev.name);
-            continue;
+          try {
+            const params = new URLSearchParams();
+            params.append('deviceId', dev.traccar_id);
+            if (formattedStart) params.append('startDate', formattedStart);
+            if (formattedEnd) params.append('endDate', formattedEnd);
+
+            const response = await axios.get(
+              `${import.meta.env.VITE_API_URL}/api/download_custom_csv?${params.toString()}`,
+              { responseType: 'text', timeout: 60000 }
+            );
+
+            const csvText = typeof response.data === 'string' ? response.data : '';
+            if (!csvText.trim()) {
+              emptyDevices.push(dev.name);
+              continue;
+            }
+
+            const parsedWb = XLSX.read(csvText, { type: 'string' });
+            const firstSheetName = parsedWb.SheetNames[0];
+            if (!firstSheetName) {
+              emptyDevices.push(dev.name);
+              continue;
+            }
+
+            const firstSheet = parsedWb.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+            if (!Array.isArray(rows) || rows.length === 0) {
+              emptyDevices.push(dev.name);
+              continue;
+            }
+
+            resultsByIndex[currentIdx] = {
+              dev,
+              rows,
+            };
+          } catch (devErr) {
+            console.error(`Failed for ${dev.name}:`, devErr);
+            failedDevices.push(dev.name);
+          } finally {
+            completedCount += 1;
+            setProgressText(`Processed ${completedCount} of ${selectedDevicesList.length} trucks...`);
           }
+        }
+      };
 
-          const parsedWb = XLSX.read(csvText, { type: 'string' });
-          const firstSheetName = parsedWb.SheetNames[0];
-          if (!firstSheetName) {
-            emptyDevices.push(dev.name);
-            continue;
-          }
+      const poolSize = Math.min(CONCURRENCY_LIMIT, selectedDevicesList.length);
+      await Promise.all(Array.from({ length: poolSize }, () => worker()));
 
-          const firstSheet = parsedWb.Sheets[firstSheetName];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      // Preserve exact truck order & assign sequential Sr. No.
+      const allConsolidatedRows = [];
+      let trucksWithDataCount = 0;
 
-          if (!Array.isArray(rows) || rows.length === 0) {
-            emptyDevices.push(dev.name);
-            continue;
-          }
+      for (const item of resultsByIndex) {
+        if (!item) continue;
+        trucksWithDataCount += 1;
 
-          trucksWithDataCount += 1;
-
-          rows.forEach((row) => {
-            const { ['Truck Name']: _oldName, IMEI: _oldImei, ...restFields } = row;
-            allConsolidatedRows.push({
-              'Sr. No.': allConsolidatedRows.length + 1,
-              'Truck Name': dev.name || 'N/A',
-              'IMEI': dev.imei || 'N/A',
-              ...restFields
-            });
+        for (const row of item.rows) {
+          const { ['Truck Name']: _oldName, IMEI: _oldImei, ['Sr. No.']: _oldSr, ...restFields } = row;
+          allConsolidatedRows.push({
+            'Sr. No.': allConsolidatedRows.length + 1,
+            'Truck Name': item.dev.name || 'N/A',
+            'IMEI': item.dev.imei || 'N/A',
+            ...restFields
           });
-        } catch (devErr) {
-          console.error(`Failed for ${dev.name}:`, devErr);
-          failedDevices.push(dev.name);
         }
       }
 
@@ -174,7 +202,7 @@ const handleDownloadConsolidatedExcel = async (e) => {
 
         XLSX.utils.book_append_sheet(newWb, newWs, 'Consolidated_Report');
 
-        // Reliable Blob download instead of XLSX.writeFile alone
+        // Reliable Blob download
         const wbArray = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([wbArray], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
