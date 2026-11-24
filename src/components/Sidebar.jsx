@@ -178,7 +178,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'History', icon: <History size={20}/>, path: '/history', disabled: true },
     { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
     { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export' },
-    { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback' },
+    // { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback' },
     { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
     { name: 'Geofences History', icon: <KeyRound size={20}/>, path: '/geofences-history', adminOnly: true },
     { name: 'Trip Processor', icon: <KeyRound size={20}/>, path: '/trip-processor', adminOnly: true },
