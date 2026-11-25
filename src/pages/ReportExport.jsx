@@ -500,17 +500,17 @@ import {
   Loader2, Search, X, CheckSquare, Square, FileSpreadsheet, Layers, Clock
 } from 'lucide-react';
 
-const formatDuration = (totalSeconds) => {
-  const safeSec = Math.max(0, Math.round(totalSeconds));
-  const mins = Math.floor(safeSec / 60);
-  const secs = safeSec % 60;
-  if (mins > 0) {
-    return `${mins}m ${String(secs).padStart(2, '0')}s`;
-  }
-  return `${secs}s`;
+const formatIstClock = (dateObj = new Date()) => {
+  return `${dateObj.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).toUpperCase()} IST`;
 };
 
-const estimateTotalSeconds = (truckCount, startVal, endVal) => {
+const getCountdownStartSeconds = (truckCount, startVal, endVal) => {
   let hoursSpan = 8;
   if (startVal && endVal) {
     const diffMs = new Date(endVal).getTime() - new Date(startVal).getTime();
@@ -519,8 +519,8 @@ const estimateTotalSeconds = (truckCount, startVal, endVal) => {
     }
   }
   const complexityFactor = Math.min(hoursSpan / 8, 4);
-  const rawEstimate = 3 + truckCount * 0.08 * complexityFactor;
-  return Math.min(Math.max(Math.round(rawEstimate), 4), 90);
+  const rawSec = 4 + truckCount * 0.08 * complexityFactor;
+  return Math.min(Math.max(Math.round(rawSec), 5), 60);
 };
 
 const ReportExport = () => {
@@ -533,8 +533,9 @@ const ReportExport = () => {
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [progressText, setProgressText] = useState('');
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [estimatedTotalSec, setEstimatedTotalSec] = useState(0);
+  const [countdownSec, setCountdownSec] = useState(0);
+  const [initialCountdownSec, setInitialCountdownSec] = useState(0);
+  const [istClock, setIstClock] = useState(() => formatIstClock());
   const [notification, setNotification] = useState({ type: '', message: '' });
 
   const dropdownRef = useRef(null);
@@ -570,24 +571,22 @@ const ReportExport = () => {
     };
   }, []);
 
-  const startTimer = (truckCount, startVal, endVal) => {
+  const startCountdown = (truckCount, startVal, endVal) => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
-    const startedAt = Date.now();
-    const initialEstimate = estimateTotalSeconds(truckCount, startVal, endVal);
-    setElapsedSec(0);
-    setEstimatedTotalSec(initialEstimate);
+    const startFrom = getCountdownStartSeconds(truckCount, startVal, endVal);
+    setInitialCountdownSec(startFrom);
+    setCountdownSec(startFrom);
+    setIstClock(formatIstClock(new Date()));
 
     timerIntervalRef.current = setInterval(() => {
-      const passed = (Date.now() - startedAt) / 1000;
-      setElapsedSec(Math.floor(passed));
-      // Gently push estimate forward if query takes longer than initial guess
-      setEstimatedTotalSec((prev) => (passed >= prev - 1 ? Math.ceil(passed) + 3 : prev));
-    }, 500);
+      setIstClock(formatIstClock(new Date()));
+      setCountdownSec((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
   };
 
-  const stopTimer = () => {
+  const stopCountdown = () => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
@@ -640,7 +639,7 @@ const ReportExport = () => {
 
     setLoading(true);
     setNotification({ type: '', message: '' });
-    startTimer(selectedIds.length, startDate, endDate);
+    startCountdown(selectedIds.length, startDate, endDate);
 
     try {
       const formattedStart = startDate && startDate.length === 16 ? `${startDate}:00` : startDate;
@@ -750,19 +749,23 @@ const ReportExport = () => {
       console.error('Export error:', err);
       showNotification('error', 'Export failed. Please try again.');
     } finally {
-      stopTimer();
+      stopCountdown();
       setLoading(false);
       setProgressText('');
-      setElapsedSec(0);
-      setEstimatedTotalSec(0);
+      setCountdownSec(0);
+      setInitialCountdownSec(0);
     }
   };
 
-  const remainingSec = Math.max(0, estimatedTotalSec - elapsedSec);
   const progressPercent =
-    estimatedTotalSec > 0
-      ? Math.min(95, Math.round((elapsedSec / estimatedTotalSec) * 90) + 5)
+    initialCountdownSec > 0
+      ? Math.max(
+          8,
+          Math.min(100, Math.round(((initialCountdownSec - countdownSec) / initialCountdownSec) * 100))
+        )
       : 10;
+
+  const timerDisplay = countdownSec > 0 ? `${countdownSec}s` : 'Finishing...';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto font-sans text-slate-900">
@@ -939,7 +942,7 @@ const ReportExport = () => {
           {/* Start Date & Time */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
-              Start Date & Time
+              Start Date & Time (IST)
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -958,7 +961,7 @@ const ReportExport = () => {
           {/* End Date & Time */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
-              End Date & Time
+              End Date & Time (IST)
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -974,21 +977,21 @@ const ReportExport = () => {
             </div>
           </div>
 
-          {/* Live Timer & Estimated Remaining Box */}
+          {/* 3-2-1 Countdown + IST Clock Box */}
           {loading && (
             <div className="mt-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                <span className="flex items-center gap-1.5 text-blue-700">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700">
+                <span className="flex items-center gap-1.5 text-blue-700 font-mono">
                   <Clock size={14} />
-                  Est. Time Left: ~{formatDuration(remainingSec)}
+                  Timer: {timerDisplay}
                 </span>
-                <span className="text-slate-500 font-mono">
-                  Elapsed: {formatDuration(elapsedSec)}
+                <span className="text-slate-800 font-mono bg-white px-2.5 py-0.5 rounded-md border border-slate-200">
+                  {istClock}
                 </span>
               </div>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-500 rounded-full"
+                  className="h-full bg-blue-600 transition-all duration-700 rounded-full"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -1007,7 +1010,7 @@ const ReportExport = () => {
             {loading ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                {`Downloading (~${formatDuration(remainingSec)} left)`}
+                {`Downloading (${timerDisplay} • ${istClock})`}
               </>
             ) : (
               <>
