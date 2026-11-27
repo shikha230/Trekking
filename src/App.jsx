@@ -83,7 +83,7 @@ function AppContent() {
             <div className="bg-[#003566] p-1.5 rounded-lg">
               <Truck className="text-[#00A8E8]" size={18} />
             </div>
-            <span className="font-black text-base text-[#00A8E8] tracking-tight">TRUCK-TRAK</span>
+            <span className="font-black text-base text-[#00A8E8] tracking-tight">USP TRAK </span>
           </div>
           
           <button 
@@ -111,7 +111,7 @@ function AppContent() {
             <Route path="/users" element={<ProtectedRoute adminOnly={true}><UsersManagement /></ProtectedRoute>} />
             <Route path="/users-list" element={<ProtectedRoute adminOnly={true}><UsersManagement /></ProtectedRoute>} />
             <Route path="/create-user" element={<ProtectedRoute adminOnly={true}><CreateUser /></ProtectedRoute>} />
-            <Route path="/report-export" element={<ProtectedRoute adminOnly={true}><ReportExport /></ProtectedRoute>} />
+            <Route path="/report-export" element={<ProtectedRoute ><ReportExport /></ProtectedRoute>} />
             <Route path="/history-playback" element={<ProtectedRoute adminOnly={true}><HistoricalPlayback /></ProtectedRoute>} />
             <Route path="/geofences-history" element={<ProtectedRoute adminOnly={true}><GeofenceHistoryModal /></ProtectedRoute>} />
             <Route path="/trip-processor" element={<GeneralTripProcessor />} />

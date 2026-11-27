@@ -1,3 +1,152 @@
+// // import React from 'react';
+// // import { Link, useLocation, useNavigate } from 'react-router-dom';
+// // import { 
+// //   LayoutDashboard, Map as MapIcon, Truck, MapPin, 
+// //   ClipboardList, FileText, History, Activity, LogOut, 
+// //   X, KeyRound, UserPlus, FileSpreadsheet, Route, Navigation, ExternalLink 
+// // } from 'lucide-react';
+
+// // const Sidebar = ({ isOpen, onClose }) => {
+// //   const location = useLocation();
+// //   const navigate = useNavigate();
+// //   const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('adminUser') || '{}');
+// //   const userRole = (storedUser.role || '').toLowerCase();
+  
+// //   // Check if admin is currently logged in based on localStorage tokens/roles
+// //   const isAdmin = userRole === 'admin' || 
+// //                   storedUser.email === 'admin@trucktrak.com' || 
+// //                   (storedUser.email || '').includes('admin') || 
+// //                   Boolean(localStorage.getItem('adminToken'));
+
+// //   const menuItems = [
+// //     { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
+// //     { name: 'Live Tracking', icon: <MapIcon size={20}/>, path: '/live' },
+// //     { name: 'Vehicles', icon: <Truck size={20}/>, path: '/vehicles' },
+// //     { name: 'Geofences', icon: <MapPin size={20}/>, path: '/geofences', adminOnly: true },
+// //     { name: 'Trip Logs', icon: <ClipboardList size={20}/>, path: '/trips' },
+// //     { name: 'Reports', icon: <FileText size={20}/>, path: '/reports' },
+// //     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events' },
+// //     { name: 'History', icon: <History size={20}/>, path: '/history' },
+// //     { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
+// //     { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export', },
+// //     { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback', },
+// //     { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
+// //     { name: 'Geofences History', icon: <KeyRound size={20}/>, path: '/geofences-history', adminOnly: true },
+// //   ];
+
+// //   const filteredMenuItems = menuItems.filter(item => {
+// //     if (item.adminOnly && !isAdmin) {
+// //       return false;
+// //     }
+// //     return true;
+// //   });
+
+// //   const handleLogout = () => {
+// //     if (isAdmin) {
+// //       localStorage.removeItem('adminToken');
+// //       localStorage.removeItem('adminUser');
+// //       localStorage.removeItem('token');
+// //       localStorage.removeItem('user');
+// //       navigate('/admin-login');
+// //     } else {
+// //       localStorage.removeItem('token');
+// //       localStorage.removeItem('user');
+// //       navigate('/login');
+// //     }
+// //   };
+
+// //   return (
+// //     <>
+// //       {isOpen && (
+// //         <div 
+// //           onClick={onClose}
+// //           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
+// //         />
+// //       )}
+
+// //       <div className={`
+// //         fixed inset-y-0 left-0 z-50 w-64 bg-[#050A19] h-screen flex flex-col border-r border-[#152B4D] shadow-2xl
+// //         transform transition-transform duration-300 ease-in-out 
+// //         md:translate-x-0 md:relative 
+// //         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+// //       `}>
+        
+// //         <div className="p-6 md:p-8 text-2xl font-black text-[#00A8E8] flex items-center justify-between tracking-tighter">
+// //           <div className="flex items-center gap-3">
+// //             <div className="bg-[#003566] p-2 rounded-xl shadow-[0_0_15px_rgba(0,168,232,0.3)]">
+// //               <Truck className="text-[#00A8E8]" size={24} />
+// //             </div>
+// //             TRUCK-TRAK
+// //           </div>
+
+// //           <button 
+// //             onClick={onClose}
+// //             className="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg bg-[#0A1931]"
+// //           >
+// //             <X size={20} />
+// //           </button>
+// //         </div>
+        
+// //         <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+// //           {filteredMenuItems.map((item) => {
+// //             const isActive = location.pathname === item.path;
+// //             return (
+// //               <Link
+// //                 key={item.path}
+// //                 to={item.path}
+// //                 onClick={() => {
+// //                   if (window.innerWidth < 768 && onClose) onClose();
+// //                 }}
+// //                 className={`flex items-center gap-4 p-3.5 rounded-2xl font-bold text-sm transition-all duration-300 ${
+// //                   isActive 
+// //                     ? 'bg-[#003566] text-white shadow-[0_10px_20px_rgba(0,53,102,0.4)] border border-[#00509D]' 
+// //                     : 'text-slate-400 hover:bg-[#0A1931] hover:text-[#00A8E8]'
+// //                 }`}
+// //               >
+// //                 <span className={isActive ? 'text-[#00A8E8]' : 'text-inherit opacity-70'}>{item.icon}</span>
+// //                 <span className="tracking-wide">{item.name}</span>
+// //               </Link>
+// //             );
+// //           })}
+
+// //           {/* 🌐 TRACCAR GPS PORTAL EXTERNAL LINK */}
+// //          {isAdmin && (
+// //             <a
+// //               href="http://traccar-uksd.srv1882256.hstgr.cloud:8082"
+// //               target="_blank"
+// //               rel="noopener noreferrer"
+// //               className="flex items-center justify-between p-3.5 rounded-2xl font-bold text-sm text-slate-400 hover:bg-[#0A1931] hover:text-[#00A8E8] transition-all duration-300 group"
+// //             >
+// //               <div className="flex items-center gap-4">
+// //                 <span className="opacity-70 group-hover:opacity-100 text-[#00A8E8] transition-opacity">
+// //                   <Navigation size={20} />
+// //                 </span>
+// //                 <span className="tracking-wide">Traccar Portal</span>
+// //               </div>
+// //               <ExternalLink size={14} className="text-slate-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+// //             </a>
+// //           )}
+// //         </nav>
+
+// //         <div className="p-4 border-t border-[#152B4D] space-y-3">
+// //           <button 
+// //             onClick={handleLogout}
+// //             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer"
+// //           >
+// //             <LogOut size={16} />
+// //             <span>Logout</span>
+// //           </button>
+// //         </div>
+
+// //       </div>
+// //     </>
+// //   );
+// // };
+
+// // export default Sidebar;
+
+
+
 // import React from 'react';
 // import { Link, useLocation, useNavigate } from 'react-router-dom';
 // import { 
@@ -21,17 +170,18 @@
 //   const menuItems = [
 //     { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
 //     { name: 'Live Tracking', icon: <MapIcon size={20}/>, path: '/live' },
-//     { name: 'Vehicles', icon: <Truck size={20}/>, path: '/vehicles' },
+//     { name: 'Vehicles', icon: <Truck size={20}/>, path: '/vehicles',  adminOnly: true },
 //     { name: 'Geofences', icon: <MapPin size={20}/>, path: '/geofences', adminOnly: true },
-//     { name: 'Trip Logs', icon: <ClipboardList size={20}/>, path: '/trips' },
-//     { name: 'Reports', icon: <FileText size={20}/>, path: '/reports' },
-//     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events' },
-//     { name: 'History', icon: <History size={20}/>, path: '/history' },
+//     { name: 'Trip Logs', icon: <ClipboardList size={20}/>, path: '/trips', disabled: true },
+//     { name: 'Reports', icon: <FileText size={20}/>, path: '/reports', disabled: true },
+//     { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events', disabled: true },
+//     { name: 'History', icon: <History size={20}/>, path: '/history', disabled: true },
 //     { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
-//     { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export', },
-//     { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback', },
+//     { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export' },
+//     // { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback' },
 //     { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
 //     { name: 'Geofences History', icon: <KeyRound size={20}/>, path: '/geofences-history', adminOnly: true },
+//     { name: 'Trip Processor', icon: <KeyRound size={20}/>, path: '/trip-processor', adminOnly: true },
 //   ];
 
 //   const filteredMenuItems = menuItems.filter(item => {
@@ -89,6 +239,22 @@
         
 //         <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 //           {filteredMenuItems.map((item) => {
+//             if (item.disabled) {
+//               return (
+//                 <div
+//                   key={item.path}
+//                   aria-disabled="true"
+//                   title="Disabled"
+//                   className="flex items-center justify-between p-3.5 rounded-2xl font-bold text-sm text-slate-600 bg-[#071124]/60 opacity-45 cursor-not-allowed select-none"
+//                 >
+//                   <div className="flex items-center gap-4">
+//                     <span className="opacity-60">{item.icon}</span>
+//                     <span className="tracking-wide">{item.name}</span>
+//                   </div>
+//                 </div>
+//               );
+//             }
+
 //             const isActive = location.pathname === item.path;
 //             return (
 //               <Link
@@ -145,46 +311,49 @@
 
 // export default Sidebar;
 
-
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, Map as MapIcon, Truck, MapPin, 
-  ClipboardList, FileText, History, Activity, LogOut, 
-  X, KeyRound, UserPlus, FileSpreadsheet, Route, Navigation, ExternalLink 
+import {
+  LayoutDashboard, Map as MapIcon, Truck, MapPin,
+  ClipboardList, FileText, History, Activity, LogOut,
+  X, KeyRound, UserPlus, FileSpreadsheet, Route, Navigation, ExternalLink
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('adminUser') || '{}');
+  const storedUser = JSON.parse(
+    localStorage.getItem('user') || localStorage.getItem('adminUser') || '{}'
+  );
   const userRole = (storedUser.role || '').toLowerCase();
-  
-  // Check if admin is currently logged in based on localStorage tokens/roles
-  const isAdmin = userRole === 'admin' || 
-                  storedUser.email === 'admin@trucktrak.com' || 
-                  (storedUser.email || '').includes('admin') || 
-                  Boolean(localStorage.getItem('adminToken'));
+
+  const isAdmin =
+    userRole === 'admin' ||
+    storedUser.email === 'admin@trucktrak.com' ||
+    (storedUser.email || '').includes('admin') ||
+    Boolean(localStorage.getItem('adminToken'));
+
+  const MAX_NON_ADMIN_VEHICLES = 3;
+  const MAX_NON_ADMIN_HOURS = 8;
 
   const menuItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
-    { name: 'Live Tracking', icon: <MapIcon size={20}/>, path: '/live' },
-    { name: 'Vehicles', icon: <Truck size={20}/>, path: '/vehicles',  adminOnly: true },
-    { name: 'Geofences', icon: <MapPin size={20}/>, path: '/geofences', adminOnly: true },
-    { name: 'Trip Logs', icon: <ClipboardList size={20}/>, path: '/trips', disabled: true },
-    { name: 'Reports', icon: <FileText size={20}/>, path: '/reports', disabled: true },
-    { name: 'Event Logs', icon: <Activity size={20}/>, path: '/events', disabled: true },
-    { name: 'History', icon: <History size={20}/>, path: '/history', disabled: true },
-    { name: 'Users', icon: <UserPlus size={20}/>, path: '/users', adminOnly: true },
-    { name: 'Report Exports', icon: <FileSpreadsheet size={20}/>, path: '/report-export' },
-    // { name: 'Trip History Playback', icon: <Route size={20}/>, path: '/history-playback' },
-    { name: 'Change Password', icon: <KeyRound size={20}/>, path: '/change-password', adminOnly: true },
-    { name: 'Geofences History', icon: <KeyRound size={20}/>, path: '/geofences-history', adminOnly: true },
-    { name: 'Trip Processor', icon: <KeyRound size={20}/>, path: '/trip-processor', adminOnly: true },
+    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
+    { name: 'Live Tracking', icon: <MapIcon size={20} />, path: '/live' },
+    { name: 'Vehicles', icon: <Truck size={20} />, path: '/vehicles', adminOnly: true },
+    { name: 'Geofences', icon: <MapPin size={20} />, path: '/geofences', adminOnly: true },
+    { name: 'Trip Logs', icon: <ClipboardList size={20} />, path: '/trips', disabledForNonAdmin: true },
+    { name: 'Reports', icon: <FileText size={20} />, path: '/reports', disabledForNonAdmin: true },
+    { name: 'Event Logs', icon: <Activity size={20} />, path: '/events', disabledForNonAdmin: true },
+    { name: 'History', icon: <History size={20} />, path: '/history' },
+    { name: 'Users', icon: <UserPlus size={20} />, path: '/users', adminOnly: true },
+    { name: 'Report Exports', icon: <FileSpreadsheet size={20} />, path: '/report-export' },
+    { name: 'Trip History Playback', icon: <Route size={20} />, path: '/history-playback' },
+    { name: 'Change Password', icon: <KeyRound size={20} />, path: '/change-password', adminOnly: true },
+    { name: 'Geofences History', icon: <KeyRound size={20} />, path: '/geofences-history', adminOnly: true },
+    { name: 'Trip Processor', icon: <KeyRound size={20} />, path: '/trip-processor', adminOnly: true },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => {
+  const filteredMenuItems = menuItems.filter((item) => {
     if (item.adminOnly && !isAdmin) {
       return false;
     }
@@ -208,19 +377,20 @@ const Sidebar = ({ isOpen, onClose }) => {
   return (
     <>
       {isOpen && (
-        <div 
+        <div
           onClick={onClose}
           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
         />
       )}
 
-      <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-[#050A19] h-screen flex flex-col border-r border-[#152B4D] shadow-2xl
-        transform transition-transform duration-300 ease-in-out 
-        md:translate-x-0 md:relative 
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        
+      <div
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-[#050A19] h-screen flex flex-col border-r border-[#152B4D] shadow-2xl
+          transform transition-transform duration-300 ease-in-out
+          md:translate-x-0 md:relative
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
         <div className="p-6 md:p-8 text-2xl font-black text-[#00A8E8] flex items-center justify-between tracking-tighter">
           <div className="flex items-center gap-3">
             <div className="bg-[#003566] p-2 rounded-xl shadow-[0_0_15px_rgba(0,168,232,0.3)]">
@@ -229,17 +399,20 @@ const Sidebar = ({ isOpen, onClose }) => {
             TRUCK-TRAK
           </div>
 
-          <button 
+          <button
+            type="button"
             onClick={onClose}
             className="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg bg-[#0A1931]"
           >
             <X size={20} />
           </button>
         </div>
-        
+
         <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {filteredMenuItems.map((item) => {
-            if (item.disabled) {
+            const isDisabled = Boolean(item.disabledForNonAdmin && !isAdmin);
+
+            if (isDisabled) {
               return (
                 <div
                   key={item.path}
@@ -264,19 +437,20 @@ const Sidebar = ({ isOpen, onClose }) => {
                   if (window.innerWidth < 768 && onClose) onClose();
                 }}
                 className={`flex items-center gap-4 p-3.5 rounded-2xl font-bold text-sm transition-all duration-300 ${
-                  isActive 
-                    ? 'bg-[#003566] text-white shadow-[0_10px_20px_rgba(0,53,102,0.4)] border border-[#00509D]' 
+                  isActive
+                    ? 'bg-[#003566] text-white shadow-[0_10px_20px_rgba(0,53,102,0.4)] border border-[#00509D]'
                     : 'text-slate-400 hover:bg-[#0A1931] hover:text-[#00A8E8]'
                 }`}
               >
-                <span className={isActive ? 'text-[#00A8E8]' : 'text-inherit opacity-70'}>{item.icon}</span>
+                <span className={isActive ? 'text-[#00A8E8]' : 'text-inherit opacity-70'}>
+                  {item.icon}
+                </span>
                 <span className="tracking-wide">{item.name}</span>
               </Link>
             );
           })}
 
-          {/* 🌐 TRACCAR GPS PORTAL EXTERNAL LINK */}
-         {isAdmin && (
+          {isAdmin && (
             <a
               href="http://traccar-uksd.srv1882256.hstgr.cloud:8082"
               target="_blank"
@@ -289,13 +463,24 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </span>
                 <span className="tracking-wide">Traccar Portal</span>
               </div>
-              <ExternalLink size={14} className="text-slate-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <ExternalLink
+                size={14}
+                className="text-slate-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+              />
             </a>
           )}
         </nav>
 
+        {!isAdmin && (
+          <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400">
+            Export limit: max <span className="text-amber-300 font-bold">{MAX_NON_ADMIN_VEHICLES} vehicles</span> &amp;{' '}
+            <span className="text-amber-300 font-bold">{MAX_NON_ADMIN_HOURS} hrs</span>
+          </div>
+        )}
+
         <div className="p-4 border-t border-[#152B4D] space-y-3">
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer"
           >
@@ -303,7 +488,6 @@ const Sidebar = ({ isOpen, onClose }) => {
             <span>Logout</span>
           </button>
         </div>
-
       </div>
     </>
   );
